@@ -1,0 +1,3 @@
+[submodule "src/pgaco/tsplib"]
+	path = src/pgaco/tsplib
+	url = git@github.com:mastqe/tsplib.git
