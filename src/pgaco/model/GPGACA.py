@@ -3,7 +3,7 @@ from tqdm import tqdm
 import networkx as nx
 import ast
 import pickle
-from ACA import ACA_TSP
+from .ACA import ACA_TSP
 
 class PolicyGradient3ACA(ACA_TSP):
     """Implementation of ACA with log policy gradient update
@@ -38,9 +38,9 @@ class PolicyGradient3ACA(ACA_TSP):
 
     def _delta_tau(self) -> np.ndarray:
         """Calculate the update rule."""
-        return self.Table_grad 
+        return self.Table_grad
 
-       
+
     def _phero_update(self) -> None:
         """
         Take an update step
@@ -52,15 +52,15 @@ class PolicyGradient3ACA(ACA_TSP):
     def _advantage_local(self, **kwargs) -> float:
         """Advantage function of the form:
         1/C(x) - Avg(1/C(x))
-        :returns: (float) calculated advantage 
+        :returns: (float) calculated advantage
 
         """
         current_point = kwargs["current_point"]
         next_point = kwargs["next_point"]
         allow_list = kwargs["allow_list"]
         advantage = 1/self.distance_matrix[current_point, next_point] - np.average(1/self.distance_matrix[current_point, allow_list])
-        return advantage 
-    
+        return advantage
+
     def _advantage_path(self, **kwargs) -> float:
         """Advantage function of the form
         1/C(s_{t}) - Avg(1/C(s_{t-1}))
@@ -73,7 +73,7 @@ class PolicyGradient3ACA(ACA_TSP):
     def _ant_search(self, j) -> None:
         """Find a path for a single path."""
         self.Table[j, 0] = 0  # start at node 0
-        ant_cost = [] 
+        ant_cost = []
         for k in range(self.n_dim - 1):
             current_point = self.Table[j, k]
             # get viable
@@ -92,7 +92,7 @@ class PolicyGradient3ACA(ACA_TSP):
             self.Table_grad[current_point, next_point] += self.alpha *advantage / self.Tau[current_point, next_point]
             for point, prob_val in zip(allow_list, prob):
                 self.Table_grad[current_point, point] -= self.alpha * advantage /self.Tau[current_point, point] * prob_val
-        return ant_cost 
+        return ant_cost
 
     def run(self,
             max_iter=None,
@@ -156,15 +156,15 @@ class PolicyGradient4ACA(ACA_TSP):
         self._name_ = "Policy Ratio"
         self.learning_rate = params.get("learning_rate", 1)
         self.Table_grad = np.zeros((self.n_dim, self.n_dim))
-        self._Tau_last_gen = self._prob_rule() 
+        self._Tau_last_gen = self._prob_rule()
         self.value_matrix = np.zeros((self.n_dim-1))
         self.value_param = params.get("value_param", 0.7)
 
     def _delta_tau(self) -> np.ndarray:
         """Calculate the update rule."""
-        return self.Table_grad 
+        return self.Table_grad
 
-       
+
     def _phero_update(self) -> None:
         """
         Take an update step
@@ -176,7 +176,7 @@ class PolicyGradient4ACA(ACA_TSP):
     def _ant_search(self, j) -> None:
         """Find a path for a single path."""
         self.Table[j, 0] = 0  # start at node 0
-        ant_cost = [] 
+        ant_cost = []
         for k in range(self.n_dim - 1):
             current_point = self.Table[j, k]
             # get viable
@@ -198,11 +198,11 @@ class PolicyGradient4ACA(ACA_TSP):
 
             prob_chosen = self.prob_matrix[current_point, next_point]/tau_list.sum()
             prob_chosen_old = self._Tau_last_gen[current_point, next_point]/tau_list.sum()
-            self.Table_grad[current_point, next_point] += self.alpha *advantage * (prob_chosen/prob_chosen_old) 
+            self.Table_grad[current_point, next_point] += self.alpha *advantage * (prob_chosen/prob_chosen_old)
             for point, prob_val in zip(allow_list, prob):
 
                 self.Table_grad[current_point, point] -= self.alpha * advantage * (prob_chosen/prob_chosen_old) * prob_val
-        return ant_cost            
+        return ant_cost
 
     def run(self,
             max_iter=None,
@@ -268,15 +268,15 @@ class PolicyGradient5ACA(ACA_TSP):
         self.learning_rate = params.get("learning_rate", 100)
         self.epsilon = params.get("epsilon", 0.1)
         self.Table_grad = np.zeros((self.n_dim, self.n_dim))
-        self._Tau_last_gen = self._prob_rule() 
+        self._Tau_last_gen = self._prob_rule()
         self.value_matrix = np.zeros((self.n_dim-1))
         self.value_param = params.get("value_param", 0.7)
 
     def _delta_tau(self) -> np.ndarray:
         """Calculate the update rule."""
-        return self.Table_grad 
+        return self.Table_grad
 
-       
+
     def _phero_update(self) -> None:
         """
         Take an update step
@@ -316,10 +316,10 @@ class PolicyGradient5ACA(ACA_TSP):
                 for tau_val, prob_val, index in zip(self.Tau[current_point, allow_list], prob, range(len(allow_list))):
                     r[index] = -1 * self.alpha * ratio * prob_val / tau_val
                     if allow_list[index] == next_point: r[index] += self.alpha * ratio / tau_val
-            else: r = np.zeros((len(allow_list)))             
-             
-            self.Table_grad[current_point, allow_list] += advantage * r 
-        return ant_cost            
+            else: r = np.zeros((len(allow_list)))
+
+            self.Table_grad[current_point, allow_list] += advantage * r
+        return ant_cost
 
     def run(self,
             max_iter=None,
@@ -358,9 +358,9 @@ class PolicyGradient5ACA(ACA_TSP):
 
 if __name__ == "__main__":
     plot = True
-    size = 100 
+    size = 100
     runs = 1
-    iterations = 500 
+    iterations = 500
     distance_matrix = np.random.randint(1, 10, size**2).reshape((size, size))
     # distance_matrix[np.where(distance_matrix == 0)] = 1e13
 
@@ -393,7 +393,7 @@ if __name__ == "__main__":
 
     ACA_runs = np.array(ACA_runs)
     print(f"ACA: {ACA_runs.mean():.2f} +/- {ACA_runs.std():.2f}")
-    
+
     if plot:
         import matplotlib.pyplot as plt
         plt.plot(aca.generation_best_Y, label=aca._name_)

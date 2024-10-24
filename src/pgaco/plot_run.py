@@ -5,9 +5,9 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from GPGACA import PolicyGradient3ACA, PolicyGradient4ACA, PolicyGradient5ACA
-from ACA import ACA_TSP
-from PGACA import PolicyGradientACA
+from model.GPGACA import PolicyGradient3ACA, PolicyGradient4ACA, PolicyGradient5ACA
+from model.ACA import ACA_TSP
+# from model.PGACA import PolicyGradientACA
 def cal_total_distance(routine):
             size = len(routine)
             return sum([distance_matrix[routine[i % size], routine[(i + 1) % size]]
@@ -16,7 +16,8 @@ def cal_total_distance(routine):
 def get_graph(name):
     try:
         size = int(name)
-        return np.random.randint(1, 10, size**2).reshape((size, size))
+        dist_mat = np.random.randint(1, 10, size**2).reshape((size, size))
+        return  dist_mat.astype(np.float64)
     except (ValueError, TypeError):
         from utils.tsplib_reader import TSPGraph
         return TSPGraph(f"{name}").graph
@@ -31,12 +32,12 @@ def aco_run(model, params, distance_matrix, cost_func=cal_total_distance,):
     plt.plot(aca.generation_best_Y, label=aca._name_)
     if verbose: print(skaco_cost)
     return skaco_cost, aca.generation_best_Y, aca
- 
+
 
 if __name__ == "__main__":
     """python plot_run.py runs rho alpha beta pop_size graph max_iter learning_rate"""
     # Reading in params
-    save_dir = "trials"
+    save_dir = "results/pgtests"
     global verbose
     verbose = bool(eval(sys.argv[9]))
     runs = int(sys.argv[1])
@@ -50,7 +51,7 @@ if __name__ == "__main__":
             "max_iter": int(sys.argv[7])
         }
     if verbose: print(f"running with options: {sys.argv}")
-    
+
     graph = sys.argv[6]
     distance_matrix = get_graph(graph)
 
@@ -59,9 +60,9 @@ if __name__ == "__main__":
         aco_run(PolicyGradient3ACA, params, distance_matrix)
         aco_run(PolicyGradient4ACA, params, distance_matrix)
         aco_run(PolicyGradient5ACA, params, distance_matrix)
-         
 
-        G = nx.from_numpy_array(distance_matrix, create_using=nx.DiGraph)
+
+        G = nx.from_numpy_array(distance_matrix + 10 * np.eye(distance_matrix.shape[0]), create_using=nx.DiGraph)
         approx = nx.approximation.simulated_annealing_tsp(G, "greedy", source=0)
         plt.plot(np.arange(0, params["max_iter"]), np.ones([params["max_iter"]])*cal_total_distance(approx))
 
@@ -70,8 +71,8 @@ if __name__ == "__main__":
         save_file = f"{save_dir}/graphsize{graph}_rho{params['rho']}_alpha{params['alpha']}_beta{params['beta']}_pop{params['pop_size']}_learnrate{params['learning_rate']}_{run}.png"
         print(f"file at {save_file}")
         plt.savefig(save_file)
-        
-        
-        
+
+
+
         if verbose: print(cal_total_distance(approx))
-        
+

@@ -10,12 +10,12 @@ tsplib_dir = base_dir / 'tsplib'
 def format_metadata(meta: str) -> dict[str, str]:
     return dict([(x[0].strip(), x[1].strip()) for x in [i.split(":") for i in meta.split("\n") if i.strip() != ""]])
 
-def from_file(filename: str) -> tuple[np.ndarray, dict[str, str]]: 
+def from_file(filename: str) -> tuple[np.ndarray, dict[str, str]]:
     file_path = tsplib_dir / filename
     with open(file_path, "r") as tspfile:
         point_list = []
         metadata = ""
-        for i in range(5): metadata += tspfile.readline() + "\n"
+        while "NODE_COORD_SECTION" not in (line:=tspfile.readline()): metadata += line + "\n"
         tspfile.readline()
         for line in tspfile.readlines()[:-1]:
             coord = line.strip().split()
@@ -43,12 +43,13 @@ class TSPGraph:
         self._dimensions = metadata.get("DIMENSIONS", None)
         self._edge_weight_type = metadata.get("EDGE_WEIGHT_TYPE", None)
         self._display_data_type = metadata.get("DISPLAY_DATA_TYPE", None)
-        
+
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser("tsplib_reader")
     parser.add_argument("file", help="the relative path the tsplib file to read-in.")
+    parser.add_argument("save_file", help="the relative path to save the graph to.")
     args = parser.parse_args()
 
     tspgraph = TSPGraph(args.file)
@@ -58,3 +59,12 @@ if __name__ == "__main__":
     print(tspgraph._type)
     print(tspgraph._dimensions)
     print(tspgraph._edge_weight_type)
+
+
+    print(tspgraph.graph.shape)
+    with open(args.save_file, "w") as sfile:
+        for i in tspgraph.graph:
+            for j in i:
+                sfile.write(f"{j:.2e},")
+            sfile.write("\n")
+

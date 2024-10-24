@@ -1,3 +1,7 @@
+# My specific files
+src/pgaco/results/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

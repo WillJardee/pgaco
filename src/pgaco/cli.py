@@ -1,5 +1,5 @@
-"""Console script for acogp."""
-import acogp
+"""Console script for pgaco."""
+import pgaco
 
 import typer
 from rich.console import Console
@@ -10,11 +10,11 @@ console = Console()
 
 @app.command()
 def main():
-    """Console script for acogp."""
+    """Console script for pgaco."""
     console.print("Replace this message by putting your code into "
-               "acogp.cli.main")
+               "pgaco.cli.main")
     console.print("See Typer documentation at https://typer.tiangolo.com/")
-    
+
 
 
 if __name__ == "__main__":

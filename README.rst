@@ -16,7 +16,7 @@ pgaco
 
 
 
-ACO with GP
+ACO with Policy Gradient
 
 
 * Free software: MIT license

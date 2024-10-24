@@ -23,7 +23,7 @@ class ACA_TSP:
 
     def __init__(self,
                  func  = None,
-                 distance_matrix = None,
+                 distance_matrix: np.ndarray | None = None,
                  params: dict = {}) -> None:
         """
         Builder for base ACA class.
@@ -42,7 +42,7 @@ class ACA_TSP:
         self.beta = params.get("beta", 2)
         self.rho = params.get("rho", 0.1)
         self.min_dist = self.distance_matrix.min() if self.distance_matrix is not None else 0
-        self.max_dist = self.distance_matrix.max() if self.distance_matrix is not None else np.inf 
+        self.max_dist = self.distance_matrix.max() if self.distance_matrix is not None else np.inf
         self.min_tau = params.get("min_tau", 0.001 * self.min_dist)
         self.prob_bias = params.get("bias", "")
         self.lamb = params.get("branching_factor", 0.2)
@@ -57,13 +57,16 @@ class ACA_TSP:
     def _build_workspace(self):
         # building workspace
         self.Tau = np.ones((self.n_dim, self.n_dim))
-        
+        self.distance_matrix += 1e-10 * np.eye(self.n_dim)
+
         # set probability bias
         match self.prob_bias.lower():
             case "": # default is uniform
                 self.prob_bias = np.ones((self.distance_matrix.shape))
             case "inv_weight": # inverse distance
-                self.prob_bias = 1 / (self.distance_matrix + 1e-10 * np.eye(self.n_dim, self.n_dim))  # bias value (1/len)
+                # self.prob_bias = 1 / (self.distance_matrix + 1e-10 * np.eye(self.n_dim, self.n_dim))  # bias value (1/len)
+                self.prob_bias = 1 / (self.distance_matrix) # bias value (1/len)
+                self.prob_bias[np.where(self.prob_bias == np.inf)] = 0
             case _:
                 raise ValueError(f"Invalid bias value of {self.prob_bias}")       # self.prob_bias = 1 / (self.distance_matrix + 1e-10 * np.eye(self.n_dim, self.n_dim))  # bias value (1/len)
 
@@ -110,7 +113,7 @@ class ACA_TSP:
             delta_tau[n1, n2] += 1 / self.y[j]
         return delta_tau
 
-       
+
     def _phero_update(self) -> None:
         """
         Take an update step
@@ -165,7 +168,7 @@ class ACA_TSP:
     def _checkpoint(self) -> None:
         """Pickles self to disk."""
         with open(self._checkpoint_file, "wb") as f:
-            pickle.dump(self, f) 
+            pickle.dump(self, f)
 
     def _save(self) -> None:
         """Saves learned pheromone table to disk."""
@@ -214,8 +217,8 @@ class ACA_TSP:
         return self.best_x, self.best_y
 
 if __name__ == "__main__":
-    size = 100 
-    runs = 1 
+    size = 100
+    runs = 1
     iterations = 100
     distance_matrix = np.random.randint(1, 10, size**2).reshape((size, size))
     # distance_matrix[np.where(distance_matrix == 0)] = 1e13
