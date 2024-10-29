@@ -170,6 +170,7 @@ class PolicyGradient4ACA(ACA_TSP):
         Take an update step
         tau_{ij} <- rho * tau_{ij} + delta tau_{ij}
         """
+
         self.Tau = self.Tau + self.learning_rate * self._delta_tau()
         self.Tau[np.where(self.Tau < self.min_tau)] = self.min_tau
 

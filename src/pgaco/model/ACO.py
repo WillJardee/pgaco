@@ -1,76 +1,97 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# @Time    : 2019/9/11
-# @Author  : github.com/guofei9987
-
-# -*- coding: utf-8 -*-
 # @Time    : 2024/4/2
 # @Author  : github.com/willjardee
-
 
 # pylint: disable=line-too-long
 
 import pickle
 import ast
+import warnings
 
 import numpy as np
-from tqdm import tqdm
-import networkx as nx
 
+def shortest_path(adj_mat: np.ndarray, path: np.ndarray):
+    length = len(path)
+    cost = 0
+    for i in range(length + 1):
+        cost += adj_mat[[path[i%length], path[(i+1)%length]]]
+    return cost
 
-class ACA_TSP:
-    """Simple, default ACA solution to TSP problem."""
+class ACO_TSP:
+    """Simple, default ACO solution to TSP problem."""
+
 
     def __init__(self,
-                 func  = None,
-                 distance_matrix: np.ndarray | None = None,
-                 params: dict = {}) -> None:
+                 distance_matrix: np.ndarray,
+                 func = shortest_path,
+                 **kwargs) -> None:
         """
         Builder for base ACA class.
 
         Args:
-            func = function to optimize wrt.
-            distance_matrix = weighted adjacency matrix of the given TSP space.
-            params: dict = any non-default params
+            distance_matrix (np.ndarray) = weighted adjacency matrix of the given TSP space.
+            func (function) = function to optimize wrt. default: path cost
+            size_pop (int) = Number of ants to search with at each generation. default: 10
+            max_iter (int) = Max number of iteration to allow. default: 100
+            alpha (float) = Exponential to apply to the learned heuristic information. default: 1
+            beta (float) = Exponential to apply to the prior heuristic information. default: 2
+            evap_rate (float) = Ratio to remove at each time step. default: 0.1
+            replay_size (int) = Size of replay buffer. A value of -1 disables the replay buffer (replay_size = size_pop). If replay_size < size_pop only the top relay_size ants will lay pheromone. default: -1
+            min_tau (float) = Min value allowed for learned heuristic values. default: 0.001 * min(distance_matrix)
+            bias_func (str) = Table to be used an initial heuristic information for the problem. Takes: 'uniform' and 'inv_weight'. default: inv_weight
+            save_file (str) = Relative path to save the final model to. default: None
+            checkpoint_file (str) = Relative path to save checkpoint file to. default: None
+            checkpoint_res (int) = Number of steps between saving the model. default: 10
         """
+
         self.distance_matrix = distance_matrix # cost matrix
-        self.n_dim = distance_matrix.shape[0] if distance_matrix is not None else 0
         self.func = func # optimization function
-        self.size_pop = params.get("size_pop", 10)
-        self.max_iter = params.get("max_iter", 20)
-        self.alpha = params.get("alpha", 1)
-        self.beta = params.get("beta", 2)
-        self.rho = params.get("rho", 0.1)
-        self.min_dist = self.distance_matrix.min() if self.distance_matrix is not None else 0
-        self.max_dist = self.distance_matrix.max() if self.distance_matrix is not None else np.inf
-        self.min_tau = params.get("min_tau", 0.001 * self.min_dist)
-        self.prob_bias = params.get("bias", "")
-        self.lamb = params.get("branching_factor", 0.2)
-        self.metric_branching_factor = False
-        self.save_file = params.get("save_file", None)
-        self._checkpoint_file = params.get("checkpoint_file", None)
-        self._checkpoint_res = params.get("checkpoint_res", 10)
+
+        self._min_dist  =   self.distance_matrix.min()
+        self._max_dist  =   self.distance_matrix.max()
+        self._dim       =   distance_matrix.shape[0]
+
+        self.allowed_params = {"size_pop", "max_iter", "alpha", "beta",
+                               "evap_rate", "min_tau", "bias_fucn",
+                               "save_file", "checkpoint_file",
+                               "checkpoint_res"}
+        for key in kwargs:
+            if key not in self.allowed_params:
+                warnings.warn(f"Parameter '{key}' is not recognized and will be ignored.")
+
+        self._size_pop          =   kwargs.get("size_pop", 10)
+        self._max_iter          =   kwargs.get("max_iter", 100)
+        self._alpha             =   kwargs.get("alpha", 1)
+        self._beta              =   kwargs.get("beta", 2)
+        self._evap_rate         =   kwargs.get("evap_rate", 0.1)
+        self._replay_size       =   kwargs.get("replay_size", -1) # assumes no replay buffer
+        self._min_tau           =   kwargs.get("min_tau", 0.001 * self._min_dist) # min value; helps erogtic behavior and NaNs
+        self._bias_func         =   kwargs.get("bias_func", "inv_weight") # Uniform and inv_weight
+        self.save_file          =   kwargs.get("save_file", None) # relative path
+        self.checkpoint_file    =   kwargs.get("checkpoint_file", None)
+        self._checkpoint_res    =   kwargs.get("checkpoint_res", 10)
+
         if self.distance_matrix is not None:
             self._build_workspace()
-        self._name_ = "ACA"
+        self._name_ = "ACO - revised"
 
     def _build_workspace(self):
         # building workspace
-        self.Tau = np.ones((self.n_dim, self.n_dim))
-        self.distance_matrix += 1e-10 * np.eye(self.n_dim)
+        self._heuristic_table = np.ones((self._dim, self._dim))
+        self.distance_matrix += 1e-10 * np.eye(self._dim)
 
         # set probability bias
-        match self.prob_bias.lower():
-            case "": # default is uniform
+        match self._bias_func.lower():
+            case "uniform": # default is uniform
                 self.prob_bias = np.ones((self.distance_matrix.shape))
             case "inv_weight": # inverse distance
-                # self.prob_bias = 1 / (self.distance_matrix + 1e-10 * np.eye(self.n_dim, self.n_dim))  # bias value (1/len)
                 self.prob_bias = 1 / (self.distance_matrix) # bias value (1/len)
                 self.prob_bias[np.where(self.prob_bias == np.inf)] = 0
             case _:
-                raise ValueError(f"Invalid bias value of {self.prob_bias}")       # self.prob_bias = 1 / (self.distance_matrix + 1e-10 * np.eye(self.n_dim, self.n_dim))  # bias value (1/len)
+                raise ValueError(f"Invalid bias value of {self.prob_bias}")
 
-        self.Table = np.zeros((self.size_pop, self.n_dim)).astype(int)  # set of ant solutions; row - ant in order of visit
+        self.Table = np.zeros((self._size_pop, self._dim)).astype(int)  # set of ant solutions; row - ant in order of visit
         self.generation_best_X, self.generation_best_Y = [], []  # storing the best ant at each epoch
         self.current_best_X, self.current_best_Y = [], []
         self.x_best_history, self.y_best_history = self.generation_best_X, self.generation_best_Y
@@ -167,6 +188,36 @@ class ACA_TSP:
             self.branching_factor.append(self._branching_factor())
         return x_best, y_best
 
+    def _get_best(self,
+                  n: int = 1,
+                  sort: bool = False):
+        """
+        Returns the n best
+        Args:
+            n (int): (default = 1) number to return
+            sort (bool): (defaults = False) Whether to return a sorted version of the list
+        Returns:
+            sorted list of (cost, path)
+        """
+        assert type(sort) == bool
+
+        grab_list = np.array([[self.y[i], self.Table[i]] for i in range(len(self.y))])
+        smallest_indices = np.argpartition([x[0] for x in grab_list], n)[:n]
+        shortest_list = [grab_list[i] for i in smallest_indices]
+
+        if not sort:
+            return shortest_list
+        else:
+            sorted_indices = np.argsort([x[0] for x in shortest_list])
+            sorted_list = [shortest_list[i] for i in sorted_indices]
+            return sorted_list
+
+        self.generation_best_X.append(x_best)
+        self.generation_best_Y.append(y_best)
+        best_generation = np.array(self.generation_best_Y).argmin()
+        self.current_best_X.append(self.generation_best_X[best_generation])
+        self.current_best_Y.append(self.generation_best_Y[best_generation])
+        return x_best, y_best
 
     def set_metrics(self, metrics):
         if "best" in metrics:
