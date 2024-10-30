@@ -5,8 +5,10 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from model.GPGACA import PolicyGradient3ACA, PolicyGradient4ACA, PolicyGradient5ACA
-from model.ACA import ACA_TSP
+from model.PGACO_LOG import PolicyGradient3ACA
+from model.PGACO_RATIO import PolicyGradient4ACA
+from model.PGACO_RATIO_CLIP import PolicyGradient5ACA
+from model.ACO import ACO_TSP
 # from model.PGACA import PolicyGradientACA
 def cal_total_distance(routine):
             size = len(routine)
@@ -22,10 +24,8 @@ def get_graph(name):
         from utils.tsplib_reader import TSPGraph
         return TSPGraph(f"{name}").graph
 
-def aco_run(model, params, distance_matrix, cost_func=cal_total_distance,):
-    aca = model(func=cal_total_distance,
-                          distance_matrix=distance_matrix,
-                          params=params)
+def aco_run(model, distance_matrix, **kwargs):
+    aca = model(distance_matrix=distance_matrix, **kwargs)
     if verbose: print(f"running {aca._name_}")
     _, skaco_cost = aca.run()
 
@@ -42,24 +42,23 @@ if __name__ == "__main__":
     verbose = bool(eval(sys.argv[9]))
     runs = int(sys.argv[1])
     params = {
-            "rho": float(sys.argv[2]),
-            "alpha": float(sys.argv[3]),
-            "beta": float(sys.argv[4]),
-            "pop_size": int(sys.argv[5]),
-            "bias": "inv_weight",
-            "learning_rate": float(sys.argv[8]),
-            "max_iter": int(sys.argv[7])
-        }
+              "evap_rate": float(sys.argv[2]),
+              "alpha": float(sys.argv[3]),
+              "beta": float(sys.argv[4]),
+              "size_pop": int(sys.argv[5]),
+              "learning_rate": float(sys.argv[8]),
+              "max_iter": int(sys.argv[7])
+    }
     if verbose: print(f"running with options: {sys.argv}")
 
     graph = sys.argv[6]
     distance_matrix = get_graph(graph)
 
     for run in range(runs):
-        aco_run(ACA_TSP, params, distance_matrix)
-        aco_run(PolicyGradient3ACA, params, distance_matrix)
-        aco_run(PolicyGradient4ACA, params, distance_matrix)
-        aco_run(PolicyGradient5ACA, params, distance_matrix)
+        aco_run(ACO_TSP, distance_matrix, **params)
+        aco_run(PolicyGradient3ACA, distance_matrix, **params)
+        aco_run(PolicyGradient4ACA, distance_matrix, **params)
+        aco_run(PolicyGradient5ACA, distance_matrix, **params)
 
 
         G = nx.from_numpy_array(distance_matrix + 10 * np.eye(distance_matrix.shape[0]), create_using=nx.DiGraph)
@@ -68,7 +67,7 @@ if __name__ == "__main__":
 
         plt.legend()
         # plt.show()
-        save_file = f"{save_dir}/graphsize{graph}_rho{params['rho']}_alpha{params['alpha']}_beta{params['beta']}_pop{params['pop_size']}_learnrate{params['learning_rate']}_{run}.png"
+        save_file = f"{save_dir}/graphsize{graph}_rho{params['evap_rate']}_alpha{params['alpha']}_beta{params['beta']}_pop{params['size_pop']}_learnrate{params['learning_rate']}_{run}.png"
         print(f"file at {save_file}")
         plt.savefig(save_file)
 

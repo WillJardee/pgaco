@@ -5,18 +5,18 @@
 
 # pylint: disable=line-too-long
 
+"""
+Change Log:
+- renamed parameters
+- made parameters kwargs
+- removed branching factor
+"""
+
 import pickle
 import ast
 import warnings
 
 import numpy as np
-
-def shortest_path(adj_mat: np.ndarray, path: np.ndarray):
-    length = len(path)
-    cost = 0
-    for i in range(length + 1):
-        cost += adj_mat[[path[i%length], path[(i+1)%length]]]
-    return cost
 
 class ACO_TSP:
     """Simple, default ACO solution to TSP problem."""
@@ -24,14 +24,13 @@ class ACO_TSP:
 
     def __init__(self,
                  distance_matrix: np.ndarray,
-                 func = shortest_path,
                  **kwargs) -> None:
         """
         Builder for base ACA class.
 
         Args:
             distance_matrix (np.ndarray) = weighted adjacency matrix of the given TSP space.
-            func (function) = function to optimize wrt. default: path cost
+            opt_func (function) = function to optimize wrt. default: path cost
             size_pop (int) = Number of ants to search with at each generation. default: 10
             max_iter (int) = Max number of iteration to allow. default: 100
             alpha (float) = Exponential to apply to the learned heuristic information. default: 1
@@ -44,180 +43,61 @@ class ACO_TSP:
             checkpoint_file (str) = Relative path to save checkpoint file to. default: None
             checkpoint_res (int) = Number of steps between saving the model. default: 10
         """
+        self._name_ = "ACO - revised"
 
-        self.distance_matrix = distance_matrix # cost matrix
-        self.func = func # optimization function
+        self.distance_matrix = distance_matrix.astype(np.float64) # cost matrix
 
         self._min_dist  =   self.distance_matrix.min()
         self._max_dist  =   self.distance_matrix.max()
         self._dim       =   distance_matrix.shape[0]
 
+
+        # Setting parameters
         self.allowed_params = {"size_pop", "max_iter", "alpha", "beta",
-                               "evap_rate", "min_tau", "bias_fucn",
+                               "evap_rate", "min_tau", "bias_func",
                                "save_file", "checkpoint_file",
-                               "checkpoint_res"}
+                               "checkpoint_res", "replay_size"}
         for key in kwargs:
             if key not in self.allowed_params:
                 warnings.warn(f"Parameter '{key}' is not recognized and will be ignored.")
 
+        self.func               =   kwargs.get("opt_func", self._path_len)
         self._size_pop          =   kwargs.get("size_pop", 10)
         self._max_iter          =   kwargs.get("max_iter", 100)
         self._alpha             =   kwargs.get("alpha", 1)
         self._beta              =   kwargs.get("beta", 2)
         self._evap_rate         =   kwargs.get("evap_rate", 0.1)
-        self._replay_size       =   kwargs.get("replay_size", -1) # assumes no replay buffer
+        self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
+        self._replay = False if self._replay_size == -1 else True
         self._min_tau           =   kwargs.get("min_tau", 0.001 * self._min_dist) # min value; helps erogtic behavior and NaNs
         self._bias_func         =   kwargs.get("bias_func", "inv_weight") # Uniform and inv_weight
         self.save_file          =   kwargs.get("save_file", None) # relative path
         self.checkpoint_file    =   kwargs.get("checkpoint_file", None)
         self._checkpoint_res    =   kwargs.get("checkpoint_res", 10)
 
-        if self.distance_matrix is not None:
-            self._build_workspace()
-        self._name_ = "ACO - revised"
-
-    def _build_workspace(self):
         # building workspace
-        self._heuristic_table = np.ones((self._dim, self._dim))
-        self.distance_matrix += 1e-10 * np.eye(self._dim)
+        self._heuristic_table = np.ones((self._dim, self._dim)) # This is where the parameters of the learned policy are stored
+        self.distance_matrix += 1e-10 * np.eye(self._dim) # Helps with NaN and stability of some methods
 
         # set probability bias
         match self._bias_func.lower():
             case "uniform": # default is uniform
-                self.prob_bias = np.ones((self.distance_matrix.shape))
+                self._prob_bias = np.ones((self.distance_matrix.shape))
             case "inv_weight": # inverse distance
-                self.prob_bias = 1 / (self.distance_matrix) # bias value (1/len)
-                self.prob_bias[np.where(self.prob_bias == np.inf)] = 0
+                self._prob_bias = 1 / (self.distance_matrix) # bias value (1/len)
+                self._prob_bias[np.where(self._prob_bias == np.inf)] = 0
             case _:
-                raise ValueError(f"Invalid bias value of {self.prob_bias}")
+                raise ValueError(f"Invalid bias value of {self._bias_func}")
 
-        self.Table = np.zeros((self._size_pop, self._dim)).astype(int)  # set of ant solutions; row - ant in order of visit
+        self._prob_rule_update()
+
+        self._replay_buffer = np.array([np.random.permutation(self._dim) for _ in range(self._replay_size)])
+        self._replay_buffer_fit = [self.func(i) for i in self._replay_buffer]
         self.generation_best_X, self.generation_best_Y = [], []  # storing the best ant at each epoch
-        self.current_best_X, self.current_best_Y = [], []
+        self.current_best_X, self.current_best_Y = np.array([]), np.inf
         self.x_best_history, self.y_best_history = self.generation_best_X, self.generation_best_Y
         self.best_x, self.best_y = None, None
-        self.branching_factor = []
-        if self.save_file is not None:
-            self._save_params()
-
-    def _save_params(self):
-        p = {
-            "size" : self.n_dim,
-            "size_pop": self.size_pop,
-            "max_iter": self.max_iter,
-            "alpha": self.alpha,
-            "beta": self.beta,
-            "peromone_decay": self.rho,
-            "min_tau": self.min_tau,
-            # "bias": self.prob_bias,
-            "branching_factor": self.lamb,
-            "checkpoint_res": self._checkpoint_res
-        }
-        with open(self.save_file, "wb") as f:
-            f.write((str(p) + "\n").encode())
-
-    def _branching_factor(self) -> float:
-        # assert (0 <= lambda) and (lambda <=1)
-        tau_min = self.Tau.min(axis=1).reshape((-1, 1))
-        tau_max = self.Tau.max(axis=1).reshape((-1, 1))
-        return np.where(self.Tau >= tau_min + self.lamb * (tau_max-tau_min))[0].size
-
-    def _delta_tau(self) -> np.ndarray:
-        """Calculate the update rule."""
-        delta_tau = np.zeros((self.n_dim, self.n_dim))
-        for j in range(self.size_pop):  # per ant
-            # add 1/(path len) to each edge
-            for k in range(self.n_dim - 1):
-                n1, n2 = self.Table[j, k], self.Table[j, k + 1]
-                delta_tau[n1, n2] += 1 / self.y[j]
-            n1, n2 = self.Table[j, self.n_dim - 1], self.Table[j, 0]
-            delta_tau[n1, n2] += 1 / self.y[j]
-        return delta_tau
-
-
-    def _phero_update(self) -> None:
-        """
-        Take an update step
-        tau_{ij} <- rho * tau_{ij} + delta tau_{ij}
-        """
-        self.Tau = (1 - self.rho) * self.Tau + self.rho * self._delta_tau()
-
-    def _get_candiates(self, taboo_set) -> list:
-        """Get the availible nodes that are not in the taboo list."""
-        return list(set(range(self.n_dim)) - set(taboo_set))
-
-    def _ant_search(self, j) -> None:
-        """Find a path for a single path."""
-        self.Table[j, 0] = 0  # start at node 0
-        for k in range(self.n_dim - 1):
-            # get viable
-            allow_list = self._get_candiates(set(self.Table[j, :k + 1]))
-            # roulette selection
-            prob = self.prob_matrix[self.Table[j, k], allow_list]
-            prob = prob / prob.sum()
-            next_point = np.random.choice(allow_list, size=1, p=prob)[0]
-            self.Table[j, k + 1] = next_point
-
-    def _prob_rule(self):
-        return (self.Tau ** self.alpha) * (self.prob_bias ** self.beta)
-
-    def _prob_rule_node(self, node, taboo_list) -> float:
-        probs = np.zeros(self.n_dim)
-        allow_list = self._get_candiates(taboo_set=taboo_list)
-        probs[allow_list] = self.prob_matrix[node][allow_list]
-        probs /= probs.sum()
-        return probs[node]
-
-    def _get_best_legacy(self, n: int = 1, sort: bool = False):
-        """
-        Returns the n best
-        Args:
-            n (int): (default = 1) number to return
-            sort (bool): (defaults = False) Whether to return a sorted version of the list
-        Returns:
-            sorted list of the sort x_best, y_best
-        """
-        index_best = self.y.argmin()
-        x_best, y_best = self.Table[index_best, :].copy(), self.y[index_best].copy()
-        self.generation_best_X.append(x_best)
-        self.generation_best_Y.append(y_best)
-        best_generation = np.array(self.generation_best_Y).argmin()
-        self.current_best_X.append(self.generation_best_X[best_generation])
-        self.current_best_Y.append(self.generation_best_Y[best_generation])
-        if self.metric_branching_factor:
-            self.branching_factor.append(self._branching_factor())
-        return x_best, y_best
-
-    def _get_best(self,
-                  n: int = 1,
-                  sort: bool = False):
-        """
-        Returns the n best
-        Args:
-            n (int): (default = 1) number to return
-            sort (bool): (defaults = False) Whether to return a sorted version of the list
-        Returns:
-            sorted list of (cost, path)
-        """
-        assert type(sort) == bool
-
-        grab_list = np.array([[self.y[i], self.Table[i]] for i in range(len(self.y))])
-        smallest_indices = np.argpartition([x[0] for x in grab_list], n)[:n]
-        shortest_list = [grab_list[i] for i in smallest_indices]
-
-        if not sort:
-            return shortest_list
-        else:
-            sorted_indices = np.argsort([x[0] for x in shortest_list])
-            sorted_list = [shortest_list[i] for i in sorted_indices]
-            return sorted_list
-
-        self.generation_best_X.append(x_best)
-        self.generation_best_Y.append(y_best)
-        best_generation = np.array(self.generation_best_Y).argmin()
-        self.current_best_X.append(self.generation_best_X[best_generation])
-        self.current_best_Y.append(self.generation_best_Y[best_generation])
-        return x_best, y_best
+        if self.save_file is not None: self._save_params()
 
     def set_metrics(self, metrics):
         if "best" in metrics:
@@ -225,17 +105,35 @@ class ACO_TSP:
         if "branching_factor" in metrics:
             self.metric_branching_factor = True
 
+    def _save_params(self, filename: str = ""):
+
+        """Save the parameters as a header to a file."""
+        p = {
+            "size" : self._dim,
+            "size_pop": self._size_pop,
+            "max_iter": self._max_iter,
+            "alpha": self._alpha,
+            "beta": self._beta,
+            "peromone_decay": self._evap_rate,
+            "min_tau": self._min_tau,
+            "bias": self._bias_func,
+            "checkpoint_res": self._checkpoint_res
+            }
+        if filename == "": filename = self.save_file
+        with open(filename, "wb") as f:
+            f.write((str(p) + "\n").encode())
+
     def _checkpoint(self) -> None:
         """Pickles self to disk."""
-        with open(self._checkpoint_file, "wb") as f:
+        with open(self.checkpoint_file, "wb") as f:
             pickle.dump(self, f)
 
     def _save(self) -> None:
         """Saves learned pheromone table to disk."""
         with open(self.save_file, "ab") as f:
-            f.write(self.Tau.astype(np.float64).tobytes())
+            f.write(self._heuristic_table.astype(np.float64).tobytes())
 
-    def _load(self, filename) -> None:
+    def _load(self, filename):
         """Loads learned pheromone table from disk."""
         with open(filename, "rb") as f:
             params = ast.literal_eval(f.readline().decode())
@@ -246,78 +144,143 @@ class ACO_TSP:
     def _restore(self) -> None:
         pass
 
-    def run(self,
-            max_iter=None,
-            metric= ["best"]):
+    def _path_len(self, path):
+        length = len(path)
+        cost = 0
+        for i in range(length + 1):
+            cost += self.distance_matrix[path[i%length]][path[(i+1)%length]]
+        return cost
+
+    def _gradient(self) -> np.ndarray:
+        """Calculate the update rule."""
+        delta = np.zeros(self._heuristic_table.shape)
+        for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
+            sol_len = len(solution)
+            # add 1/(path len) to each edge
+            for k in range(sol_len + 1):
+                n1, n2 = solution[(k)%sol_len], solution[(k+1)%sol_len]
+                delta[n1, n2] += 1 / cost
+        return delta
+
+    def _gradient_update(self) -> None:
+        """Take an gradient step"""
+        self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * self._gradient()
+
+    def _get_candiates(self, taboo_set: set[int] | list[int]) -> list:
+        """Get the availible nodes that are not in the taboo list."""
+        return list(set(range(self._dim)) - set(taboo_set))
+
+    def _single_solution(self) -> np.ndarray:
+        """Find a path for a single path."""
+        solution = [np.random.randint(self._dim)]
+        for k in range(self._dim - 1):
+            allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
+            prob = self._prob_matrix[solution[k], allow_list]
+            prob = prob / prob.sum()
+            next_point = np.random.choice(allow_list, size=1, p=prob)[0] # roulette selection
+            solution.append(next_point)
+        return np.array(solution, dtype=int)
+
+    def _prob_rule_update(self) -> None:
+        """Updates the probability matrix"""
+        self._prob_matrix = (self._heuristic_table ** self._alpha) * (self._prob_bias ** self._beta)
+
+    def _prob_rule_node(self, node: int, taboo_list: set[int] | list[int]) -> float:
+        """Returns the probability of an action given a state and history"""
+        probs = np.zeros(self._dim)
+        allow_list = self._get_candiates(taboo_set=taboo_list)
+        probs[allow_list] = self._prob_matrix[node][allow_list]
+        probs /= probs.sum()
+        return probs[node]
+
+    def _add_replay_buffer(self, new_fitness, new_solutions, sort: bool = True) -> None:
+        """Add the provided list to the replay buffer, prefering new values when relevant"""
+        if not self._replay: # if we are not doing replay, just return the values
+            self._replay_buffer = new_solutions
+            self._replay_buffer_fit = new_fitness
+            return
+
+        full_buffer = np.concatenate([new_solutions, self._replay_buffer])
+        full_fitness = np.concatenate([new_fitness, self._replay_buffer_fit])
+        if sort:
+            keep_indices = np.argsort(full_fitness)[:self._replay_size]
+        else:
+            keep_indices = np.argpartition(full_fitness, kth=self._replay_size)[:self._replay_size]
+        self._replay_buffer = full_buffer[keep_indices]
+        self._replay_buffer_fit = full_fitness[keep_indices]
+
+
+    def _get_best(self, n: int = 1, sort: bool = False):
+        """Returns the n best values in the replay buffer"""
+        assert type(sort) == bool
+
+        if n == 1:
+            index = self._replay_buffer_fit.argmin()
+            return np.array(self._replay_buffer_fit[index]), np.array(self._replay_buffer[index])
+        elif n > 1 and n <= self._dim:
+            if sort:
+                index = np.argsort(self._replay_buffer_fit)[:n]
+            else:
+                index = np.argpartition(self._replay_buffer_fit, kth=n)[:n]
+            return self._replay_buffer_fit[index], self._replay_buffer[index]
+        else:
+            raise ValueError("self._get_best only supports up to the length of the replay_buffer")
+
+
+    def run(self, max_iter=None, metric= ["best"]):
+        """Runs through solving the TSP."""
         if self.func is None or self.distance_matrix is None:
-            raise ValueError("func and distance_matrix must be set to run ACA")
+            raise ValueError(f"func and distance_matrix must be set to run {self._name_}")
 
         self.set_metrics(metric)
         self.metrics = metric
-        """Driver method for finding the opt to TSP problem."""
-        self.max_iter = max_iter or self.max_iter
-        for i in range(self.max_iter):
+        for i in range(max_iter or self._max_iter):
             self.iteration = i
-            self.prob_matrix = self._prob_rule()
-            for j in range(self.size_pop):
-                self._ant_search(j)
-            # get score of ants via given opt funciton
-            self.y = np.array([self.func(i) for i in self.Table])
-            self._get_best()
+            self._prob_rule_update()
 
-            self._phero_update()
+            # Generate solutions
+            gen_solutions = [self._single_solution() for _ in range(self._size_pop)]
+            gen_fitness = np.array([self.func(i) for i in gen_solutions])
+            self._add_replay_buffer(gen_fitness, gen_solutions)
 
-            if self.save_file is not None and self.iteration % self._checkpoint_res == 0:
-                self._save()
-            if self._checkpoint_file is not None and self.iteration % self._checkpoint_res == 0:
-                self._checkpoint()
+            self._gradient_update()
 
-        self.best_x = self.current_best_X[-1]
-        self.best_y = self.current_best_Y[-1]
-        return self.best_x, self.best_y
+            # Get best solution and save it
+            y, x = self._get_best(n=1)
+            if y <= self.current_best_Y: self.current_best_Y, self.current_best_X = y, x
+            self.generation_best_Y.append(y)
+
+            # Save check
+            if self.iteration % self._checkpoint_res == 0:
+                if self.save_file is not None: self._save()
+                if self.checkpoint_file is not None: self._checkpoint()
+
+        return self.current_best_Y, self.current_best_X
 
 if __name__ == "__main__":
+    from tqdm import tqdm
+    import matplotlib.pyplot as plt
     size = 100
-    runs = 1
+    runs = 5
     iterations = 100
     distance_matrix = np.random.randint(1, 10, size**2).reshape((size, size))
-    # distance_matrix[np.where(distance_matrix == 0)] = 1e13
-
-    def cal_total_distance(routine):
-        size = len(routine)
-        return sum([distance_matrix[routine[i % size], routine[(i + 1) % size]]
-                    for i in range(size)])
-
 
     print("Running ACA")
     ACA_runs = []
 
     for test in tqdm(range(runs)):
         save_file = f"ACO_run_{test}.txt"
-        aca = ACA_TSP(func=cal_total_distance,
-                      distance_matrix=distance_matrix,
-                      params={"max_iter": iterations,
-                              "save_file": save_file,
-                              "checkpoint_res": 1,
-                              "rho": 0.5,
-                              "alpha": 1,
-                              "beta": 1,
-                              "pop_size": 10,
-                              "bias": "inv_weight"
-                              })
-        skaco_sol, skaco_cost = aca.run(metric = ["branching_factor"])
+        aca = ACO_TSP(distance_matrix,
+                      max_iter = iterations,
+                      save_file = save_file,
+                      replay_size = -1)
+        skaco_cost, skaco_sol = aca.run()
         ACA_runs.append(skaco_cost)
 
     ACA_runs = np.array(ACA_runs)
     print(f"ACA: {ACA_runs.mean():.2f} +/- {ACA_runs.std():.2f}")
 
-    # params, tau_table = aca._load("ACO_run_0.txt")
-    # print(tau_table)
-
-    G = nx.from_numpy_array(distance_matrix, create_using=nx.DiGraph)
-    approx = nx.approximation.simulated_annealing_tsp(G, "greedy", source=0)
-
-
-    print(cal_total_distance(approx))
+    plt.plot(aca.generation_best_Y)
+    plt.show()
 
     pass
