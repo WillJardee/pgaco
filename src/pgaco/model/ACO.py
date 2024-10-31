@@ -47,7 +47,7 @@ class ACO_TSP:
 
         self.distance_matrix = distance_matrix.astype(np.float64) # cost matrix
 
-        self._min_dist  =   self.distance_matrix.min()
+        self._min_dist  =   self.distance_matrix[np.where(self.distance_matrix > 0)].min()
         self._max_dist  =   self.distance_matrix.max()
         self._dim       =   distance_matrix.shape[0]
 
@@ -165,6 +165,7 @@ class ACO_TSP:
     def _gradient_update(self) -> None:
         """Take an gradient step"""
         self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * self._gradient()
+        self._heuristic_table[np.where(self._heuristic_table < self._min_tau)] = self._min_tau
 
     def _get_candiates(self, taboo_set: set[int] | list[int]) -> list:
         """Get the availible nodes that are not in the taboo list."""

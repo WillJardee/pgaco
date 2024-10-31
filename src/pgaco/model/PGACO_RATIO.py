@@ -11,7 +11,8 @@ class PolicyGradient4ACA(PolicyGradient3ACA):
     """Implementation of ACA with prob ratio policy gradient update"""
     def __init__(self, distance_matrix, **kwargs) -> None:
         """Class specific params."""
-        super().__init__(distance_matrix, **kwargs)
+        self.allowed_params = {}
+        super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "Policy Ratio"
         self._prob_table_last_gen = self._prob_matrix
 

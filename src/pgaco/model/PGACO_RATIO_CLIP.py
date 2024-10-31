@@ -12,7 +12,8 @@ class PolicyGradient5ACA(PolicyGradient4ACA):
                  distance_matrix,
                  **kwargs) -> None:
         """Class specific params."""
-        super().__init__(distance_matrix, **kwargs)
+        self.allowed_params = {"epsilon"}
+        super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "Policy Ratio Clip"
         self._epsilon = kwargs.get("epsilon", 0.1)
 

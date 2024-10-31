@@ -18,12 +18,8 @@ class PolicyGradient3ACA(ACO_TSP):
                  **kwargs) -> None:
         """Class specific params."""
         self.allowed_params = {"learning_rate", "value_param",
-                               "advantage_func"}
-        passkwargs = kwargs.copy()
-        for key in kwargs:
-            if key in self.allowed_params:
-                passkwargs.pop(key)
-        super().__init__(distance_matrix, **kwargs)
+                               "advantage_func", "annealing_factor"}
+        super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "Log Policy"
         self._learning_rate = kwargs.get("learning_rate", 100)
         self._running_gradient = np.zeros((self._dim, self._dim))
@@ -32,6 +28,13 @@ class PolicyGradient3ACA(ACO_TSP):
         self.value_param = kwargs.get("value_param", 0.7)
         self._adv_func = kwargs.get("advantage_func", "local")
         self._annealing_factor = kwargs.get("annealing_factor", 0.01)
+
+    def _passkwargs(self, **kwargs):
+        passkwargs = kwargs.copy()
+        for key in kwargs:
+            if key in self.allowed_params:
+                passkwargs.pop(key)
+        return passkwargs
 
     def _gradient(self) -> np.ndarray:
         """Take the sum of all gradients in the replay buffer"""

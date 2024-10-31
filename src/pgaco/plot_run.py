@@ -24,54 +24,65 @@ def get_graph(name):
         from utils.tsplib_reader import TSPGraph
         return TSPGraph(f"{name}").graph
 
-def aco_run(model, distance_matrix, **kwargs):
-    aca = model(distance_matrix=distance_matrix, **kwargs)
-    if verbose: print(f"running {aca._name_}")
-    _, skaco_cost = aca.run()
-
-    plt.plot(aca.generation_best_Y, label=aca._name_)
-    if verbose: print(skaco_cost)
-    return skaco_cost, aca.generation_best_Y, aca
-
 
 if __name__ == "__main__":
     """python plot_run.py runs rho alpha beta pop_size graph max_iter learning_rate"""
     # Reading in params
-    save_dir = "results/pgtests"
-    global verbose
-    verbose = bool(eval(sys.argv[9]))
-    runs = int(sys.argv[1])
-    params = {
-              "evap_rate": float(sys.argv[2]),
-              "alpha": float(sys.argv[3]),
-              "beta": float(sys.argv[4]),
-              "size_pop": int(sys.argv[5]),
-              "learning_rate": float(sys.argv[8]),
-              "max_iter": int(sys.argv[7])
-    }
-    if verbose: print(f"running with options: {sys.argv}")
+    iters = 1000
 
-    graph = sys.argv[6]
+    save_dir = "results/pgtests"
+
+    graph = "att48.tsp"
     distance_matrix = get_graph(graph)
 
-    for run in range(runs):
-        aco_run(ACO_TSP, distance_matrix, **params)
-        aco_run(PolicyGradient3ACA, distance_matrix, **params)
-        aco_run(PolicyGradient4ACA, distance_matrix, **params)
-        aco_run(PolicyGradient5ACA, distance_matrix, **params)
+    aco = ACO_TSP(distance_matrix,
+                  evap_rate =   0.5,
+                  alpha     =   0.7220583863165029,
+                  beta      =   4.705037074424084,
+                  max_iter  =   iters)
 
+    pgaco1 = PolicyGradient3ACA(distance_matrix,
+                                evap_rate           =   0.45363263708110035,
+                                learning_rate       =   9893.936558809508,
+                                annealing_factor    =   0.044527655588653174,
+                                alpha               =   4.975906418434734,
+                                beta                =   4.693377743319343,
+                                max_iter            =   iters)
 
-        G = nx.from_numpy_array(distance_matrix + 10 * np.eye(distance_matrix.shape[0]), create_using=nx.DiGraph)
-        approx = nx.approximation.simulated_annealing_tsp(G, "greedy", source=0)
-        plt.plot(np.arange(0, params["max_iter"]), np.ones([params["max_iter"]])*cal_total_distance(approx))
+    pgaco2 = PolicyGradient4ACA(distance_matrix,
+                                evap_rate           =   0.5,
+                                learning_rate       =   10_000,
+                                annealing_factor    =   0.001,
+                                alpha               =   5,
+                                beta                =   5,
+                                max_iter            =   iters)
 
-        plt.legend()
-        # plt.show()
-        save_file = f"{save_dir}/graphsize{graph}_rho{params['evap_rate']}_alpha{params['alpha']}_beta{params['beta']}_pop{params['size_pop']}_learnrate{params['learning_rate']}_{run}.png"
-        print(f"file at {save_file}")
-        plt.savefig(save_file)
+    pgaco3 = PolicyGradient5ACA(distance_matrix,
+                                evap_rate           =   0.5,
+                                learning_rate       =   8640.55059748571,
+                                annealing_factor    =   0.01,
+                                alpha               =   5,
+                                beta                =   5,
+                                epsilon             =   0.5,
+                                max_iter            =   iters)
 
+    print("running aco")
+    aco_score, _ = aco.run()
+    print("running pgaco-log")
+    pgaco1_score, _ = pgaco1.run()
+    print("running pgaco-ratio")
+    pgaco2_score, _ = pgaco2.run()
+    print("running pgaco-ratio-clip")
+    pgaco3_score, _ = pgaco3.run()
 
+    plt.plot(aco.generation_best_Y, label=aco._name_)
+    plt.plot(pgaco1.generation_best_Y, label=pgaco1._name_)
+    plt.plot(pgaco2.generation_best_Y, label=pgaco2._name_)
+    plt.plot(pgaco3.generation_best_Y, label=pgaco3._name_)
 
-        if verbose: print(cal_total_distance(approx))
+    plt.legend()
+    # plt.show()
+    save_file = f"{save_dir}/{graph}_bayesiantune.png"
+    print(f"file at {save_file}")
+    plt.savefig(save_file)
 
