@@ -6,7 +6,7 @@ import pickle
 try: from .ACO import ACO_TSP
 except: from ACO import ACO_TSP
 
-class PolicyGradient3ACA(ACO_TSP):
+class PGACO_LOG(ACO_TSP):
     """Implementation of ACO with log policy gradient update
 
     Attributes:
