@@ -8,7 +8,7 @@ except: from PGACO_LOG import PGACO_LOG
 
 
 class PGACO_RATIO(PGACO_LOG):
-    """Implementation of ACA with prob ratio policy gradient update"""
+    """Implementation of ACA with prob ratio policy gradient update; clipping is on by default"""
     def __init__(self, distance_matrix, **kwargs) -> None:
         """Class specific params."""
         self.allowed_params = {"epsilon"}

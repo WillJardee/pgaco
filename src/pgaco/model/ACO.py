@@ -21,12 +21,11 @@ import numpy as np
 class ACO_TSP:
     """Simple, default ACO solution to TSP problem."""
 
-
     def __init__(self,
                  distance_matrix: np.ndarray,
                  **kwargs) -> None:
         """
-        Builder for base ACA class.
+        Builder for base ACO class.
 
         Args:
             distance_matrix (np.ndarray) = weighted adjacency matrix of the given TSP space.
@@ -43,7 +42,7 @@ class ACO_TSP:
             checkpoint_file (str) = Relative path to save checkpoint file to. default: None
             checkpoint_res (int) = Number of steps between saving the model. default: 10
         """
-        self._name_ = "ACO - revised"
+        self._name_ = "ACO"
 
         self.distance_matrix = distance_matrix.astype(np.float64) # cost matrix
 
@@ -54,8 +53,8 @@ class ACO_TSP:
 
         # Setting parameters
         self.allowed_params = {"size_pop", "max_iter", "alpha", "beta",
-                               "evap_rate", "min_tau", "bias_func",
-                               "save_file", "checkpoint_file",
+                               "evap_rate", "min_tau", "max_tau", "minmax",
+                               "bias_func", "save_file", "checkpoint_file",
                                "checkpoint_res", "replay_size"}
         for key in kwargs:
             if key not in self.allowed_params:
@@ -70,13 +69,17 @@ class ACO_TSP:
         self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
         self._replay = False if self._replay_size == -1 else True
         self._min_tau           =   kwargs.get("min_tau", 0.001 * self._min_dist) # min value; helps erogtic behavior and NaNs
+        self._max_tau           =   kwargs.get("max_tau", self._max_dist) # max value; helps with runaway behavior
+        self._minmax_adaptive   =   kwargs.get("minmax", True)
+        self._min = False if (self._min_tau == -1 and not self._minmax_adaptive) else True
+        self._max = False if (self._max_tau == -1 and not self._minmax_adaptive) else True
         self._bias_func         =   kwargs.get("bias_func", "inv_weight") # Uniform and inv_weight
         self.save_file          =   kwargs.get("save_file", None) # relative path
         self.checkpoint_file    =   kwargs.get("checkpoint_file", None)
         self._checkpoint_res    =   kwargs.get("checkpoint_res", 10)
 
         # building workspace
-        self._heuristic_table = np.ones((self._dim, self._dim)) # This is where the parameters of the learned policy are stored
+        self._heuristic_table = np.ones((self._dim, self._dim)) * (self._max_tau if self._max else 1) # This is where the parameters of the learned policy are stored
         self.distance_matrix += 1e-10 * np.eye(self._dim) # Helps with NaN and stability of some methods
 
         # set probability bias
@@ -94,10 +97,17 @@ class ACO_TSP:
         self._replay_buffer = np.array([np.random.permutation(self._dim) for _ in range(self._replay_size)])
         self._replay_buffer_fit = [self.func(i) for i in self._replay_buffer]
         self.generation_best_X, self.generation_best_Y = [], []  # storing the best ant at each epoch
-        self.current_best_X, self.current_best_Y = np.array([]), np.inf
+        self.current_best_X, self.current_best_Y = np.array([]), self._replay_buffer_fit[0]
         self.x_best_history, self.y_best_history = self.generation_best_X, self.generation_best_Y
         self.best_x, self.best_y = None, None
         if self.save_file is not None: self._save_params()
+
+    def _passkwargs(self, **kwargs):
+        passkwargs = kwargs.copy()
+        for key in kwargs:
+            if key in self.allowed_params:
+                passkwargs.pop(key)
+        return passkwargs
 
     def set_metrics(self, metrics):
         if "best" in metrics:
@@ -162,10 +172,22 @@ class ACO_TSP:
                 delta[n1, n2] += 1 / cost
         return delta
 
+    def _minmax(self) -> None:
+        if self._max:
+            if self._minmax_adaptive:
+                self._max_tau = 1/(self._evap_rate * self.current_best_Y)
+            self._heuristic_table[np.where(self._heuristic_table > self._max_tau)] = self._max_tau
+        if self._min:
+            if self._minmax_adaptive:
+                self._min_tau = self._max_tau / (2 * self._dim)
+            self._heuristic_table[np.where(self._heuristic_table < self._min_tau)] = self._min_tau
+
+
     def _gradient_update(self) -> None:
         """Take an gradient step"""
         self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * self._gradient()
-        self._heuristic_table[np.where(self._heuristic_table < self._min_tau)] = self._min_tau
+        self._minmax()
+
 
     def _get_candiates(self, taboo_set: set[int] | list[int]) -> list:
         """Get the availible nodes that are not in the taboo list."""

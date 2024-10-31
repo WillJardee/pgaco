@@ -1,15 +1,14 @@
-import sys
-import threading
+import multiprocessing
+from functools import partial
 
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from model.PGACO_LOG import PolicyGradient3ACA
-from model.PGACO_RATIO import PolicyGradient4ACA
-from model.PGACO_RATIO_CLIP import PolicyGradient5ACA
-from model.ACO import ACO_TSP
-# from model.PGACA import PolicyGradientACA
+from pgaco.model.ACO import ACO_TSP
+from pgaco.model.PGACO_LOG import PGACO_LOG
+from pgaco.model.PGACO_RATIO import PGACO_RATIO
+
 def cal_total_distance(routine):
             size = len(routine)
             return sum([distance_matrix[routine[i % size], routine[(i + 1) % size]]
@@ -18,99 +17,123 @@ def cal_total_distance(routine):
 def get_graph(name):
     try:
         size = int(name)
-        dist_mat = np.random.randint(1, 10, size**2).reshape((size, size))
+        dist_mat = np.random.randint(1, 100, size**2).reshape((size, size))
         return  dist_mat.astype(np.float64)
     except (ValueError, TypeError):
-        from utils.tsplib_reader import TSPGraph
+        from pgaco.utils.tsplib_reader import TSPGraph
         return TSPGraph(f"{name}").graph
 
+def plot(runs:np.ndarray, color:str, label:str, alpha: float = 0.3) -> None:
+    runs = np.array(runs)
+    aco_mean = np.mean(runs, axis = 0)
+    aco_std = np.std(runs, axis=0)
+    time_steps = np.arange(len(aco_mean))
+    plt.plot(aco_mean, color=color, label=label)
+    plt.fill_between(time_steps,
+                     aco_mean - aco_std,
+                     aco_mean + aco_std,
+                     alpha=alpha, color=color)
+
+def run_aco(distance_matrix, max_iter, _):
+    aco = ACO_TSP(distance_matrix,
+                  evap_rate=0.1,
+                  alpha=1,
+                  beta=2,
+                  max_iter=max_iter,
+                  max_tau=-1,
+                  min_tau=-1,
+                  minmax=False)
+    aco.run()
+    return aco.generation_best_Y, aco._name_
+
+def run_minmaxaco(distance_matrix, max_iter, _):
+    aco = ACO_TSP(distance_matrix,
+              evap_rate =   0.1,
+              alpha     =   1,
+              beta      =   2,
+              max_iter  =   max_iter)
+    aco.run()
+    return aco.generation_best_Y, "MINMAX " + aco._name_
+
+def run_pgaco1(distance_matrix, max_iter, _):
+    aco = PGACO_LOG(distance_matrix,
+                    evap_rate           =   0.1,
+                    learning_rate       =   1_00,
+                    annealing_factor    =   0.01,
+                    alpha               =   1,
+                    beta                =   2,
+                    max_iter            =   max_iter)
+    aco.run()
+    return aco.generation_best_Y, aco._name_
+
+def run_pgaco2(distance_matrix, max_iter, _):
+    aco = PGACO_RATIO(distance_matrix,
+                      evap_rate           =   0.1,
+                      learning_rate       =   1_000,
+                      annealing_factor    =   0.01,
+                      alpha               =   1,
+                      beta                =   2,
+                      max_iter            =   max_iter,
+                      epsilon             =   -1) # disables the clipping
+    aco.run()
+    return aco.generation_best_Y, aco._name_
+
+def run_pgaco3(distance_matrix, max_iter, _):
+    aco = PGACO_RATIO(distance_matrix,
+                      evap_rate           =   0.1,
+                      learning_rate       =   1_000,
+                      annealing_factor    =   0.01,
+                      alpha               =   1,
+                      beta                =   2,
+                      epsilon             =   0.05,
+                      max_iter            =   max_iter)
+    aco.run()
+    return aco.generation_best_Y, aco._name_ + " w/ clip"
+
+def parallel_aco(alg, runs, distance_matrix):
+    with multiprocessing.Pool() as pool:
+        run_func = partial(alg, distance_matrix, iters)
+        results = pool.map(run_func, range(runs))
+
+    aco_runs = [result[0] for result in results]
+    aco_name = results[0][1]  # Assuming all runs have the same name
+    return np.array(aco_runs), aco_name
 
 if __name__ == "__main__":
     """python plot_run.py runs rho alpha beta pop_size graph max_iter learning_rate"""
     # Reading in params
-    iters = 500
+    global iters
+    iters = 300
+    runs = 10
 
     save_dir = "results/pgtests"
-
-    graph = "att48.tsp"
+    graph = 100
     distance_matrix = get_graph(graph)
 
-    # aco = ACO_TSP(distance_matrix,
-    #               evap_rate =   0.5,
-    #               alpha     =   0.7220583863165029,
-    #               beta      =   4.705037074424084,
-    #               max_iter  =   iters)
-    aco = ACO_TSP(distance_matrix,
-                  evap_rate =   0.1,
-                  alpha     =   1,
-                  beta      =   2,
-                  max_iter  =   iters)
+    print("running ACO")
+    aco_runs, aco_name = parallel_aco(run_aco, runs, distance_matrix)
+    plot(aco_runs, color="blue", label=aco_name)
 
-    # pgaco1 = PolicyGradient3ACA(distance_matrix,
-    #                             evap_rate           =   0.45363263708110035,
-    #                             learning_rate       =   9893.936558809508,
-    #                             annealing_factor    =   0.044527655588653174,
-    #                             alpha               =   4.975906418434734,
-    #                             beta                =   4.693377743319343,
-    #                             max_iter            =   iters)
-    pgaco1 = PolicyGradient3ACA(distance_matrix,
-                                evap_rate           =   0.1,
-                                learning_rate       =   1_000,
-                                annealing_factor    =   0.05,
-                                alpha               =   1,
-                                beta                =   2,
-                                max_iter            =   iters)
+    print("running MINMAX-ACO")
+    aco_runs, aco_name = parallel_aco(run_minmaxaco, runs, distance_matrix)
+    plot(aco_runs, color="green", label=aco_name)
 
+    print("running PGACO-LOG")
+    aco_runs, aco_name = parallel_aco(run_pgaco1, runs, distance_matrix)
+    plot(aco_runs, color="purple", label=aco_name)
 
-    # pgaco2 = PolicyGradient4ACA(distance_matrix,
-                                # evap_rate           =   0.5,
-                                # learning_rate       =   10_000,
-                                # annealing_factor    =   0.001,
-                                # alpha               =   5,
-                                # beta                =   5,
-                                # max_iter            =   iters)
-    pgaco2 = PolicyGradient4ACA(distance_matrix,
-                                evap_rate           =   0.1,
-                                learning_rate       =   10_000,
-                                annealing_factor    =   0.001,
-                                alpha               =   1,
-                                beta                =   2,
-                                max_iter            =   iters)
+    print("running PGACO-RATIO")
+    aco_runs, aco_name = parallel_aco(run_pgaco2, runs, distance_matrix)
+    plot(aco_runs, color="orange", label=aco_name)
 
-    # pgaco3 = PolicyGradient5ACA(distance_matrix,
-    #                             evap_rate           =   0.5,
-    #                             learning_rate       =   8640.55059748571,
-    #                             annealing_factor    =   0.01,
-    #                             alpha               =   5,
-    #                             beta                =   5,
-    #                             epsilon             =   0.5,
-    #                             max_iter            =   iters)
-    pgaco3 = PolicyGradient5ACA(distance_matrix,
-                                evap_rate           =   0.1,
-                                learning_rate       =   10_000,
-                                annealing_factor    =   0.01,
-                                alpha               =   1,
-                                beta                =   2,
-                                epsilon             =   0.05,
-                                max_iter            =   iters)
-
-    print("running aco")
-    aco_score, _ = aco.run()
-    print("running pgaco-log")
-    pgaco1_score, _ = pgaco1.run()
-    print("running pgaco-ratio")
-    pgaco2_score, _ = pgaco2.run()
-    print("running pgaco-ratio-clip")
-    pgaco3_score, _ = pgaco3.run()
-
-    plt.plot(aco.generation_best_Y, label=aco._name_)
-    plt.plot(pgaco1.generation_best_Y, label=pgaco1._name_)
-    plt.plot(pgaco2.generation_best_Y, label=pgaco2._name_)
-    plt.plot(pgaco3.generation_best_Y, label=pgaco3._name_)
+    print("running PGACO-RATIO w/ clip")
+    aco_runs, aco_name = parallel_aco(run_pgaco3, runs, distance_matrix)
+    plot(aco_runs, color="red", label=aco_name)
 
     plt.legend()
+    plt.tight_layout()
     # plt.show()
-    save_file = f"{save_dir}/{graph}_handpick.png"
+    save_file = f"{save_dir}/{graph}_handpick1.png"
     print(f"file at {save_file}")
     plt.savefig(save_file)
 

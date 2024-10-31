@@ -53,7 +53,7 @@ class PGACO_LOG(ACO_TSP):
     def _gradient_update(self) -> None:
         """Take an gradient step"""
         self._heuristic_table = self._heuristic_table + self._learning_rate * self._gradient()
-        self._heuristic_table[np.where(self._heuristic_table < self._min_tau)] = self._min_tau
+        self._minmax()
 
     def _add_replay_buffer(self, new_fitness, new_solutions, new_grads, sort: bool = True) -> None:
         """Add the provided list to the replay buffer, prefering new values when relevant"""

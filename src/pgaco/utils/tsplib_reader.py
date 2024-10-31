@@ -20,6 +20,7 @@ def from_file(filename: str) -> tuple[np.ndarray, dict[str, str]]:
         for line in tspfile.readlines()[:-1]:
             coord = line.strip().split()
             point_list.append([float(i) for i in coord[1::]])
+    point_list = np.unique(point_list, axis=0)
     graph = np.zeros([len(point_list), len(point_list)])
     for val1, i in zip(point_list, range(len(point_list))):
         for val2, j in zip(point_list, range(len(point_list))):
