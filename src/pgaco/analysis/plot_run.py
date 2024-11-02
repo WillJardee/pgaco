@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from pgaco.model.ACO import ACO_TSP
 from pgaco.model.PGACO_LOG import PGACO_LOG
 from pgaco.model.PGACO_RATIO import PGACO_RATIO
+from pgaco.model.ADACO import ADACO
 
 def cal_total_distance(routine):
             size = len(routine)
@@ -54,6 +55,16 @@ def run_minmaxaco(distance_matrix, max_iter, _):
               max_iter  =   max_iter)
     aco.run()
     return aco.generation_best_Y, "MINMAX " + aco._name_
+
+def run_adaco(distance_matrix, max_iter, _):
+    aco = ADACO(distance_matrix,
+                evap_rate =   0.1,
+                alpha     =   1,
+                beta      =   2,
+                max_iter  =   max_iter)
+    aco.run()
+    return aco.generation_best_Y, aco._name_
+
 
 def run_pgaco1(distance_matrix, max_iter, _):
     aco = PGACO_LOG(distance_matrix,
@@ -110,21 +121,14 @@ if __name__ == "__main__":
     graph = 100
     distance_matrix = get_graph(graph)
 
-    print("running ACO")
-    aco_runs, aco_name = parallel_aco(run_aco, runs, distance_matrix)
-    plot(aco_runs, color="blue", label=aco_name)
-
     print("running MINMAX-ACO")
     aco_runs, aco_name = parallel_aco(run_minmaxaco, runs, distance_matrix)
     plot(aco_runs, color="green", label=aco_name)
 
-    print("running PGACO-LOG")
-    aco_runs, aco_name = parallel_aco(run_pgaco1, runs, distance_matrix)
-    plot(aco_runs, color="purple", label=aco_name)
+    print("running ADACO")
+    aco_runs, aco_name = parallel_aco(run_adaco, runs, distance_matrix)
+    plot(aco_runs, color="blue", label=aco_name)
 
-    print("running PGACO-RATIO")
-    aco_runs, aco_name = parallel_aco(run_pgaco2, runs, distance_matrix)
-    plot(aco_runs, color="orange", label=aco_name)
 
     print("running PGACO-RATIO w/ clip")
     aco_runs, aco_name = parallel_aco(run_pgaco3, runs, distance_matrix)
@@ -133,7 +137,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.tight_layout()
     # plt.show()
-    save_file = f"{save_dir}/{graph}_handpick1.png"
+    save_file = f"{save_dir}/{graph}_handpick3.png"
     print(f"file at {save_file}")
     plt.savefig(save_file)
 
