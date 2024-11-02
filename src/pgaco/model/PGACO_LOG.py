@@ -1,10 +1,6 @@
 import numpy as np
-from tqdm import tqdm
-import networkx as nx
-import ast
-import pickle
-try: from .ACO import ACO_TSP
-except: from ACO import ACO_TSP
+
+from pgaco.model.ACO import ACO_TSP
 
 class PGACO_LOG(ACO_TSP):
     """Implementation of ACO with log policy gradient update
@@ -106,12 +102,12 @@ class PGACO_LOG(ACO_TSP):
     def _single_solution(self):
         """Find a path for a single path."""
         self._running_gradient = np.zeros([self._dim, self._dim])
-        solution = [np.random.randint(self._dim)]
+        solution = [self._rng.integers(self._dim)]
         for k in range(self._dim - 1):
             allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
             prob = self._prob_matrix[solution[k], allow_list]
             prob = prob / prob.sum()
-            next_point = np.random.choice(allow_list, size=1, p=prob)[0] # roulette selection
+            next_point = self._rng.choice(allow_list, size=1, p=prob)[0] # roulette selection
             solution.append(next_point)
 
             advantage = self._advantage_local(current_point=solution[-2], next_point=solution[-1], allow_list=allow_list)

@@ -30,10 +30,10 @@ class ADACO(ACO_TSP):
         grad = self._gradient()
         self._decay_grad = self._decay_rate * self._decay_grad + (1-self._decay_rate) * grad**2
         epsilon = 1e-7
-        herm = grad * np.sqrt((self._delta_decay_grad + epsilon) / (self._decay_grad + epsilon) )
-        self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table - herm
+        hess = grad * np.sqrt((self._delta_decay_grad + epsilon) / (self._decay_grad + epsilon) )
+        self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table - hess
         self._minmax()
-        self._delta_decay_grad = self._decay_rate * self._delta_decay_grad + (1-self._decay_rate) * (herm * herm)
+        self._delta_decay_grad = self._decay_rate * self._delta_decay_grad + (1-self._decay_rate) * (hess * hess)
 
 if __name__ == "__main__":
     from tqdm import tqdm

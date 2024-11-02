@@ -55,7 +55,7 @@ class ACO_TSP:
         self.allowed_params = {"size_pop", "max_iter", "alpha", "beta",
                                "evap_rate", "min_tau", "max_tau", "minmax",
                                "bias_func", "save_file", "checkpoint_file",
-                               "checkpoint_res", "replay_size"}
+                               "checkpoint_res", "replay_size", "seed"}
         for key in kwargs:
             if key not in self.allowed_params:
                 warnings.warn(f"Parameter '{key}' is not recognized and will be ignored.")
@@ -68,6 +68,7 @@ class ACO_TSP:
         self._evap_rate         =   kwargs.get("evap_rate", 0.1)
         self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
         self._replay = False if self._replay_size == -1 else True
+        if not self._replay: self._replay_size = self._size_pop
         self._min_tau           =   kwargs.get("min_tau", 0.001 * self._min_dist) # min value; helps erogtic behavior and NaNs
         self._max_tau           =   kwargs.get("max_tau", self._max_dist) # max value; helps with runaway behavior
         self._minmax_adaptive   =   kwargs.get("minmax", True)
@@ -77,6 +78,9 @@ class ACO_TSP:
         self.save_file          =   kwargs.get("save_file", None) # relative path
         self.checkpoint_file    =   kwargs.get("checkpoint_file", None)
         self._checkpoint_res    =   kwargs.get("checkpoint_res", 10)
+        self._seed              =   kwargs.get("seed", None)
+
+        self._rng               =   np.random.default_rng(seed=self._seed)
 
         # building workspace
         self._heuristic_table = np.ones((self._dim, self._dim)) * (self._max_tau if self._max else 1) # This is where the parameters of the learned policy are stored
@@ -94,7 +98,8 @@ class ACO_TSP:
 
         self._prob_rule_update()
 
-        self._replay_buffer = np.array([np.random.permutation(self._dim) for _ in range(self._replay_size)])
+        num_list = np.arange(self._dim)
+        self._replay_buffer = np.array([self._rng.permutation(num_list) for _ in range(self._replay_size)])
         self._replay_buffer_fit = [self.func(i) for i in self._replay_buffer]
         self.generation_best_X, self.generation_best_Y = [], []  # storing the best ant at each epoch
         self.current_best_X, self.current_best_Y = np.array([]), self._replay_buffer_fit[0]
@@ -195,12 +200,12 @@ class ACO_TSP:
 
     def _single_solution(self) -> np.ndarray:
         """Find a path for a single path."""
-        solution = [np.random.randint(self._dim)]
+        solution = [self._rng.integers(self._dim)]
         for k in range(self._dim - 1):
             allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
             prob = self._prob_matrix[solution[k], allow_list]
             prob = prob / prob.sum()
-            next_point = np.random.choice(allow_list, size=1, p=prob)[0] # roulette selection
+            next_point = self._rng.choice(allow_list, size=1, p=prob)[0] # roulette selection
             solution.append(next_point)
         return np.array(solution, dtype=int)
 
