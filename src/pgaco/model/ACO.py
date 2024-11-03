@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# @Time    : 2024/4/2
-# @Author  : github.com/willjardee
-
-# pylint: disable=line-too-long
-
 """
-Change Log:
-- renamed parameters
-- made parameters kwargs
-- removed branching factor
+Ant Colony Optimization (ACO) implementation for solving TSP problems.
+
+This module provides classes and functions to implement the ACO algorithm,
+particularly focused on solving the Traveling Salesman Problem (TSP).
+
+Classes:
+    ACO: Main class for the Ant Colony Optimization algorithm.
+
+The ACO algorithm simulates the behavior of ants to find optimal paths
+in a graph, which can be applied to various shortest problems.
 """
-from typing import Tuple
-import pickle
+
 import ast
+import pickle
 import warnings
 
 import numpy as np
+
 
 class ACO_TSP:
     """Simple, default ACO solution to TSP problem."""
@@ -58,7 +59,8 @@ class ACO_TSP:
                                "checkpoint_res", "replay_size", "seed"}
         for key in kwargs:
             if key not in self.allowed_params:
-                warnings.warn(f"Parameter '{key}' is not recognized and will be ignored.")
+                warnings.warn(f"Parameter '{key}' is not recognized and will be ignored.",
+                              stacklevel=2)
 
         self.func               =   kwargs.get("opt_func", self._path_len)
         self._size_pop          =   kwargs.get("size_pop", 10)
@@ -68,13 +70,15 @@ class ACO_TSP:
         self._evap_rate         =   kwargs.get("evap_rate", 0.1)
         self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
         self._replay = False if self._replay_size == -1 else True
-        if not self._replay: self._replay_size = self._size_pop
+        if not self._replay:
+            self._replay_size = self._size_pop
         self._min_tau           =   kwargs.get("min_tau", 1/self._max_dist) # min value; helps erogtic behavior and NaNs
         self._max_tau           =   kwargs.get("max_tau", self._max_dist) # max value; helps with runaway behavior
         self._minmax_adaptive   =   kwargs.get("minmax", True)
         # self._min = False if (self._min_tau == -1 and not self._minmax_adaptive) else True
         # min always has to be taken or else we get an undefined point
-        if self._min_tau == -1: self._min_tau = self._min_dist * 1e-7
+        if self._min_tau == -1:
+            self._min_tau = self._min_dist * 1e-7
         self._min = True
         self._max = False if (self._max_tau == -1 and not self._minmax_adaptive) else True
         self._bias_func         =   kwargs.get("bias_func", "inv_weight") # Uniform and inv_weight
@@ -87,13 +91,13 @@ class ACO_TSP:
         self._iteration         =   0
 
         # building workspace
-        self._heuristic_table = np.ones((self._dim, self._dim)) * (self._max_tau if self._max else 1) # This is where the parameters of the learned policy are stored
+        self._heuristic_table = np.ones(tuple([self._dim, self._dim])) * (self._max_tau if self._max else 1) # This is where the parameters of the learned policy are stored
         self.distance_matrix += 1e-10 * np.eye(self._dim) # Helps with NaN and stability of some methods
 
         # set probability bias
         match self._bias_func.lower():
             case "uniform": # default is uniform
-                self._prob_bias = np.ones((self.distance_matrix.shape))
+                self._prob_bias = np.ones(self.distance_matrix.shape)
             case "inv_weight": # inverse distance
                 self._prob_bias = 1 / (self.distance_matrix) # bias value (1/len)
                 self._prob_bias[np.where(self._prob_bias == np.inf)] = 0
@@ -109,7 +113,8 @@ class ACO_TSP:
         self.current_best_Y, self.current_best_X = self._replay_buffer_fit[0], np.array([])
         self.x_best_history, self.y_best_history = self.generation_best_X, self.generation_best_Y
         self.best_x, self.best_y = None, None
-        if self.save_file is not None: self._save_params()
+        if self.save_file is not None:
+            self._save_params()
 
     def _passkwargs(self, **kwargs):
         passkwargs = kwargs.copy()
@@ -119,7 +124,6 @@ class ACO_TSP:
         return passkwargs
 
     def _save_params(self, filename: str = ""):
-
         """Save the parameters as a header to a file."""
         p = {
             "size" : self._dim,
@@ -132,7 +136,8 @@ class ACO_TSP:
             "bias": self._bias_func,
             "checkpoint_res": self._checkpoint_res
             }
-        if filename == "": filename = self.save_file
+        if filename == "":
+            filename = self.save_file
         with open(filename, "wb") as f:
             f.write((str(p) + "\n").encode())
 
@@ -142,12 +147,12 @@ class ACO_TSP:
             pickle.dump(self, f)
 
     def _save(self) -> None:
-        """Saves learned pheromone table to disk."""
+        """Save learned pheromone table to disk."""
         with open(self.save_file, "ab") as f:
             f.write(self._heuristic_table.astype(np.float64).tobytes())
 
-    def _load(self, filename):
-        """Loads learned pheromone table from disk."""
+    def _load(self, filename) -> tuple[dict, np.ndarray]:
+        """Load learned pheromone table from disk."""
         with open(filename, "rb") as f:
             params = ast.literal_eval(f.readline().decode())
             tau_table = np.frombuffer(f.read(), dtype=np.float64)
@@ -187,7 +192,7 @@ class ACO_TSP:
 
 
     def _gradient_update(self) -> None:
-        """Take an gradient step"""
+        """Take an gradient step."""
         self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * self._gradient()
         self._minmax()
 
@@ -208,11 +213,11 @@ class ACO_TSP:
         return np.array(solution, dtype=int)
 
     def _prob_rule_update(self) -> None:
-        """Updates the probability matrix"""
+        """Update the probability matrix."""
         self._prob_matrix = (self._heuristic_table ** self._alpha) * (self._prob_bias ** self._beta)
 
     def _prob_rule_node(self, node: int, taboo_list: set[int] | list[int]) -> float:
-        """Returns the probability of an action given a state and history"""
+        """Return the probability of an action given a state and history."""
         probs = np.zeros(self._dim)
         allow_list = self._get_candiates(taboo_set=taboo_list)
         probs[allow_list] = self._prob_matrix[node][allow_list]
@@ -220,7 +225,7 @@ class ACO_TSP:
         return probs[node]
 
     def _add_replay_buffer(self, new_fitness, new_solutions, sort: bool = True) -> None:
-        """Add the provided list to the replay buffer, prefering new values when relevant"""
+        """Add the provided list to the replay buffer, prefering new values when relevant."""
         if not self._replay: # if we are not doing replay, just return the values
             self._replay_buffer = new_solutions
             self._replay_buffer_fit = new_fitness
@@ -236,9 +241,9 @@ class ACO_TSP:
         self._replay_buffer_fit = full_fitness[keep_indices]
 
 
-    def _get_best(self, n: int = 1, sort: bool = False) -> Tuple[np.ndarray, np.ndarray]:
-        """Returns the n best values in the replay buffer"""
-        assert type(sort) == bool
+    def _get_best(self, n: int = 1, sort: bool = False) -> tuple[np.ndarray, np.ndarray]:
+        """Return the n best values in the replay buffer."""
+        assert isinstance(sort, bool)
 
         if n == 1:
             index = self._replay_buffer_fit.argmin()
@@ -253,8 +258,8 @@ class ACO_TSP:
             raise ValueError("self._get_best only supports up to the length of the replay_buffer")
 
 
-    def take_step(self, steps=1) -> Tuple[float, np.ndarray]:
-        """Take [steps; default=1] steps of the search algorithm"""
+    def take_step(self, steps=1) -> tuple[float, np.ndarray]:
+        """Take [steps; default=1] steps of the search algorithm."""
         for i in range(steps):
             self._iteration += i
             self._prob_rule_update()
@@ -268,32 +273,36 @@ class ACO_TSP:
 
             # Get best solution and save it
             y, x = self._get_best(n=1)
-            if y <= self.current_best_Y: self.current_best_Y, self.current_best_X = float(y), x
+            if y <= self.current_best_Y:
+                self.current_best_Y, self.current_best_X = float(y), x
             self.generation_best_Y.append(y)
 
             # Save check
             if self._iteration % self._checkpoint_res == 0:
-                if self.save_file is not None: self._save()
-                if self.checkpoint_file is not None: self._checkpoint()
+                if self.save_file is not None:
+                    self._save()
+                if self.checkpoint_file is not None:
+                    self._checkpoint()
 
         return float(self.current_best_Y), self.current_best_X
 
 
     def run(self, max_iter=None):
-        """Runs through solving the TSP."""
+        """Run through solving the TSP."""
         if self.func is None or self.distance_matrix is None:
             raise ValueError(f"func and distance_matrix must be set to run {self._name_}")
 
         num_iter = max_iter or self._max_iter
 
         if self._iteration > 0:
-            warnings.warn(f"The model has already make {self._iteration}, taking another {num_iter} steps. Recreate the class to reset the search")
+            warnings.warn(f"The model has already make {self._iteration}, taking another {num_iter} steps. Recreate the class to reset the search",
+                          stacklevel=2)
 
         return self.take_step(steps=num_iter)
 
 if __name__ == "__main__":
-    from tqdm import tqdm
     import matplotlib.pyplot as plt
+    from tqdm import tqdm
     size = 100
     runs = 5
     iterations = 100

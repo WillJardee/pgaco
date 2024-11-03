@@ -1,10 +1,17 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import tqdm
+"""
+Runner to test the ACO classes.
 
+Outdated runner file for testing the classes.
+Use pgaco.analysis.plot_run.py instead.
+"""
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import tqdm
 from ACA import ACA_TSP
-from PGACA import PolicyGradientACA 
 from minmaxACA import ACA_minmax
+from PGACA import PolicyGradientACA
 
 
 ###############################################################################
@@ -13,7 +20,7 @@ from minmaxACA import ACA_minmax
 def stat_run():
     """Quick function for grabbing mean and std over ACA runs."""
     size = 100
-    runs = 5 
+    runs = 5
     iterations = 500
     distance_matrix = np.random.randint(1, 10, size**2).reshape((size, size))
     # distance_matrix[np.where(distance_matrix == 0)] = 1e13
@@ -22,7 +29,7 @@ def stat_run():
         return sum([distance_matrix[routine[i % size], routine[(i + 1) % size]]
                     for i in range(size)])
 
-    
+
 
     print("Running ACA")
 
@@ -138,7 +145,7 @@ def stat_run():
 
 
 def plotting():
-    """Function for quick plotting some results."""
+    """Quick plotting some results."""
     colors = {
         "ACA": ("blue", "blue"),
         "PGACA": ("green", "green"),

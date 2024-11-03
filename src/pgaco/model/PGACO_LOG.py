@@ -1,16 +1,36 @@
-from typing import Tuple
+"""
+Policy Gradient Ant Colony Optimization (PGACO) implementation for solving TSP problems.
+
+This module provides classes and functions to implement the PGACO algorithm
+that combines Policy Gradient methods with Ant Colony Optimization,
+particularly focused on solving the Traveling Salesman Problem (TSP).
+
+Classes:
+    PGACO_LOG: Policy Gradient ACO with log-gradient.
+
+The ACO algorithm simulates the behavior of ants to find optimal paths in a
+graph, which can be applied to various shortest problems.
+
+Example:
+    pgaco_log = PGACO_LOG(problem_instance, size_pop = 100, learning_rate=10_000)
+    pgaco_log.run(max_iter=1000)
+"""
+
 
 import numpy as np
 
 from pgaco.model.ACO import ACO_TSP
 
-class PGACO_LOG(ACO_TSP):
-    """Implementation of ACO with log policy gradient update
 
-    Attributes:
+class PGACO_LOG(ACO_TSP):
+    """Implementation of ACO with log policy gradient update.
+
+    Attributes
+    ----------
         See parent's documentation
         learning_rate = learning rate for the gradient update.
     """
+
     def __init__(self,
                  distance_matrix: np.ndarray,
                  **kwargs) -> None:
@@ -22,25 +42,15 @@ class PGACO_LOG(ACO_TSP):
         self._learning_rate = kwargs.get("learning_rate", 100)
         self._running_gradient = np.zeros((self._dim, self._dim))
         self._replay_buffer_grads = np.array([self._running_gradient for _ in range(self._replay_size)])
-        self.value_matrix = np.zeros((self._dim-1))
-        self.value_param = kwargs.get("value_param", 0.7)
         self._adv_func = kwargs.get("advantage_func", "local")
         self._annealing_factor = kwargs.get("annealing_factor", 0.01)
 
-    def _passkwargs(self, **kwargs):
-        passkwargs = kwargs.copy()
-        for key in kwargs:
-            if key in self.allowed_params:
-                passkwargs.pop(key)
-        return passkwargs
-
     def _gradient(self) -> np.ndarray:
-        """Take the sum of all gradients in the replay buffer"""
+        """Take the sum of all gradients in the replay buffer."""
         grad = np.zeros([self._dim, self._dim])
         for g in self._replay_buffer_grads:
             grad += g
         return grad / self._size_pop
-
 
     def _gradient_add(self, current_point, next_point, allow_list, prob, advantage) -> None:
         """Add a value to the running gradient."""
@@ -49,12 +59,12 @@ class PGACO_LOG(ACO_TSP):
             self._running_gradient[current_point, point] -= self._alpha * advantage /self._heuristic_table[current_point, point] * prob_val
 
     def _gradient_update(self) -> None:
-        """Take an gradient step"""
+        """Take an gradient step."""
         self._heuristic_table = self._heuristic_table + self._learning_rate * self._gradient()
         self._minmax()
 
     def _add_replay_buffer(self, new_fitness, new_solutions, new_grads, sort: bool = True) -> None:
-        """Add the provided list to the replay buffer, prefering new values when relevant"""
+        """Add the provided list to the replay buffer, prefering new values when relevant."""
         if not self._replay: # if we are not doing replay, just return the values
             self._replay_buffer = new_solutions
             self._replay_buffer_fit = new_fitness
@@ -74,24 +84,30 @@ class PGACO_LOG(ACO_TSP):
 
 
     def _advantage_local(self, **kwargs):
-        """Advantage function of the form:
-        1/C(x) - Avg(1/C(x))
-        """
+        """Advantage function of the form: 1/C(x) - Avg(1/C(x))."""
         current_point   = kwargs["current_point"]
         next_point      = kwargs["next_point"]
         allow_list      = kwargs["allow_list"]
         return 1/self.distance_matrix[current_point, next_point] - np.average(1/self.distance_matrix[current_point, allow_list])
 
     def _advantage_path(self, **kwargs):
-        """Advantage function of the form
+        """
+        Calculate the advantage function.
+
+        This function computes the advantage using the formula:
         1/C(s_{t}) - Avg(1/C(s_{t-1}))
-        :returns: (float) calculated average
+
+        Returns
+        -------
+        float
+            The calculated advantage value.
 
         """
         pass
 
 
     def _advantage(self, **kwargs):
+        """Return advantage function defined in `advantage`."""
         valid_adv = {"local", "path"}
         match self._adv_func:
             case "local":
@@ -116,7 +132,8 @@ class PGACO_LOG(ACO_TSP):
             self._gradient_add(solution[-2], solution[-1], allow_list, prob, advantage)
         return np.array(solution, dtype=int)
 
-    def take_step(self, steps=1) -> Tuple[float, np.ndarray]:
+    def take_step(self, steps=1) -> tuple[float, np.ndarray]:
+        """Take [steps; default=1] steps of the search algorithm."""
         for i in range(steps):
             self._iteration += i
             self._prob_rule_update()
@@ -133,21 +150,24 @@ class PGACO_LOG(ACO_TSP):
 
             # Get best solution and save it
             y, x = self._get_best(n=1)
-            if y <= self.current_best_Y: self.current_best_Y, self.current_best_X = y, x
+            if y <= self.current_best_Y:
+                self.current_best_Y, self.current_best_X = y, x
             self.generation_best_Y.append(y)
 
             # Save check
             if self._iteration % self._checkpoint_res == 0:
-                if self.save_file is not None: self._save()
-                if self.checkpoint_file is not None: self._checkpoint()
+                if self.save_file is not None:
+                    self._save()
+                if self.checkpoint_file is not None:
+                    self._checkpoint()
             self._learning_rate = self._learning_rate * (1 - self._annealing_factor)
 
-        return self.current_best_Y, self.current_best_X
+        return float(self.current_best_Y), self.current_best_X
 
 
 if __name__ == "__main__":
-    from tqdm import tqdm
     import matplotlib.pyplot as plt
+    from tqdm import tqdm
     size = 50
     runs = 5
     iterations = 100
@@ -158,9 +178,9 @@ if __name__ == "__main__":
 
     for test in tqdm(range(runs)):
         save_file = f"ACO_run_{test}.txt"
-        aca = PolicyGradient3ACA(distance_matrix,
-                      max_iter = iterations,
-                      save_file = save_file)
+        aca = PGACO_LOG(distance_matrix,
+                        max_iter = iterations,
+                        save_file = save_file)
         skaco_cost, skaco_sol = aca.run()
         ACA_runs.append(skaco_cost)
 

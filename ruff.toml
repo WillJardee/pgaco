@@ -8,10 +8,12 @@ exclude = [
     "__pycache__",
     "build",
     "dist",
+    "PGACO.py"
 ]
 
-select = ["E", "F", "I"]
-ignore = []
+select = ["E", "F", "I", "W", "C90", "D", "UP", "B", "A"]
+# select = ["E", "F", "I", "W", "C90", "N", "D", "UP", "B", "A"]
+ignore = ["E501"]
 
 line-length = 88
 target-version = "py39"
@@ -21,7 +23,7 @@ target-version = "py39"
 
 # Docstring standards
 [pydocstyle]
-convention = "google"
+convention = "numpy"
 
 [flake8-quotes]
 docstring-quotes = "double"

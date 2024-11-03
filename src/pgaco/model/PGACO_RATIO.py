@@ -1,9 +1,30 @@
+"""
+Policy Gradient Ant Colony Optimization (PGACO) implementation for solving TSP problems.
+
+This module provides classes and functions to implement the PGACO algorithm
+that combines Policy Gradient methods with Ant Colony Optimization,
+particularly focused on solving the Traveling Salesman Problem (TSP).
+
+Classes:
+    PGACO_RATIO: Policy Gradient ACO with policy ratio.
+
+The ACO algorithm simulates the behavior of ants to find optimal paths in a
+graph, which can be applied to various shortest problems.
+
+Example:
+    pgaco_ratio = PGACO_RATIO(problem_instance, epsilon=-1, size_pop = 100, learning_rate=10_000)
+    pgaco_ratio.run(max_iter=1000)
+"""
+
+
 import numpy as np
+
 from pgaco.model.PGACO_LOG import PGACO_LOG
 
 
 class PGACO_RATIO(PGACO_LOG):
-    """Implementation of ACA with prob ratio policy gradient update; clipping is on by default"""
+    """Implementation of ACA with prob ratio policy gradient update; clipping is on by default."""
+
     def __init__(self, distance_matrix, **kwargs) -> None:
         """Class specific params."""
         self.allowed_params = {"epsilon"}
@@ -23,9 +44,11 @@ class PGACO_RATIO(PGACO_LOG):
 
         if self._clip:
             if advantage > 0:
-                if prob_ratio > (1 + self._epsilon): return
+                if prob_ratio > (1 + self._epsilon):
+                    return
             elif advantage < 0:
-                if prob_ratio < (1 - self._epsilon): return
+                if prob_ratio < (1 - self._epsilon):
+                    return
 
         self._running_gradient[current_point, next_point] += self._alpha * advantage * prob_ratio
         for point, prob_val in zip(allow_list, prob):
@@ -37,8 +60,8 @@ class PGACO_RATIO(PGACO_LOG):
 
 
 if __name__ == "__main__":
-    from tqdm import tqdm
     import matplotlib.pyplot as plt
+    from tqdm import tqdm
     size = 50
     runs = 5
     iterations = 100
@@ -49,9 +72,9 @@ if __name__ == "__main__":
 
     for test in tqdm(range(runs)):
         save_file = f"ACO_run_{test}.txt"
-        aca = PolicyGradient4ACA(distance_matrix,
-                      max_iter = iterations,
-                      save_file = save_file)
+        aca = PGACO_RATIO(distance_matrix,
+                          max_iter = iterations,
+                          save_file = save_file)
         skaco_cost, skaco_sol = aca.run()
         ACA_runs.append(skaco_cost)
 

@@ -51,8 +51,10 @@ clean-test: ## remove test and coverage artifacts
 lint/flake8: ## check style with flake8
 	flake8 pgaco tests
 
+lint/ruff: ## check style with ruff
+	ruff check .
 
-lint: lint/flake8 ## check style
+lint: lint/ruff ## check style
 
 test: ## run tests quickly with the default Python
 	pytest

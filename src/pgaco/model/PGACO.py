@@ -1,6 +1,6 @@
 import numpy as np
-
 from ACA import ACA_TSP
+
 
 ###############################################################################
 class PolicyGradientACA(ACA_TSP):

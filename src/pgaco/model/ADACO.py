@@ -1,14 +1,26 @@
+"""
+Adaptive Gradient ACO implemented in <https://doi.org/10.1016/j.swevo.2022.101046>.
+
+Classes:
+    ADACO: Policy Gradient ACO with log-gradient.
+
+"""
+
+
 import numpy as np
-from tqdm import tqdm
+
 from pgaco.model.ACO import ACO_TSP
 
-class ADACO(ACO_TSP):
-    """Implementation of ACO with log policy gradient update
 
-    Attributes:
+class ADACO(ACO_TSP):
+    """Implementation of ACO with log policy gradient update.
+
+    Attributes
+    ----------
         See parent's documentation
         learning_rate = learning rate for the gradient update.
     """
+
     def __init__(self,
                  distance_matrix: np.ndarray,
                  **kwargs) -> None:
@@ -23,7 +35,7 @@ class ADACO(ACO_TSP):
         self._delta_decay_grad = np.zeros([self._dim, self._dim])
 
     def _gradient_update(self) -> None:
-        """Take an gradient step"""
+        """Take an gradient step."""
         grad = self._gradient()
         self._decay_grad = self._decay_rate * self._decay_grad + (1-self._decay_rate) * grad**2
         epsilon = 1e-7
@@ -33,8 +45,8 @@ class ADACO(ACO_TSP):
         self._delta_decay_grad = self._decay_rate * self._delta_decay_grad + (1-self._decay_rate) * (hess * hess)
 
 if __name__ == "__main__":
-    from tqdm import tqdm
     import matplotlib.pyplot as plt
+    from tqdm import tqdm
     size = 50
     runs = 5
     iterations = 100
@@ -45,7 +57,7 @@ if __name__ == "__main__":
     aca = ADACO(distance_matrix,
                   max_iter = iterations)
 
-    for test in tqdm(range(runs)):
+    for _ in tqdm(range(runs)):
         aca = ADACO(distance_matrix,
                       max_iter = iterations)
         skaco_cost, skaco_sol = aca.run()
