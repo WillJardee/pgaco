@@ -14,15 +14,28 @@ maintainers = [
   {name = "Will Jardee", email = "willjardee@gmail.com"}
 ]
 classifiers = [
-
+    "Programming Language :: Python :: 3"
+    "License :: OSI Approced :: MIT License"
+    "Operating System :: Linux"
 ]
 license = {text = "MIT license"}
+requires-python = ">=3.9"
 dependencies = [
-    "numpy",    # matrices
+    "numpy>=1.26",    # matrices
 ]
 
+
 [project.optional-dependencies]
+tuning = [
+    "optuna==4.0.0",  # for tuning
+    "optuna-dashboard>=0.16",  # for viewing optuna while running
+    "plotly>=5.24.1",  # graphing functionality of optuna
+]
+analysis = [
+    "matplotlib>=3.9",   # plotting
+]
 dev = [
+    "networkx>=3.3",  # graph generation
     "coverage",  # testing
     "mypy",  # linting
     "pytest",  # testing
@@ -40,8 +53,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
 "*" = ["*.*"]
-
-
 
 
 # Mypy

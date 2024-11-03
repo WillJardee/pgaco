@@ -1,17 +1,18 @@
 from datetime import datetime
 from os.path import dirname
 import sys
-import pgaco
 
 import optuna
 import numpy as np
 
+import pgaco
+
 pruning_period  = 1    # period to check pruning at
 n_trials        = 200
-n_jobs          = -1     # -1 for as many as possible
+n_jobs          = 4     # -1 for as many as possible
 seed            = 42
-max_iter        = 200
-default_graph   = 100
+max_iter        = 100
+default_graph   = "ali535.tsp"
 model_name      = "ACO"
 module_path     = dirname(pgaco.__spec__.origin)
 save_dir        = f"{module_path}/results/tuning_params"
@@ -40,7 +41,8 @@ def model(trial) -> float:
 
 def main(model_to_run, model_name, graph_name: str| int | None = None):
     optuna.logging.set_verbosity(optuna.logging.WARNING)
-    journal_name = f"{model_name}.log"
+    if isinstance(graph_name, str): graph_name = graph_name.strip(".tsp")
+    journal_name = f"{graph_name}{model_name}.log"
     dandt = datetime.now()
 
     storage = optuna.storages.JournalStorage(
@@ -49,6 +51,7 @@ def main(model_to_run, model_name, graph_name: str| int | None = None):
 
     study = optuna.create_study(direction="minimize",
                                 # pruner=optuna.pruners.SuccessiveHalvingPruner(),
+                                pruner=optuna.pruners.NopPruner(),
                                 sampler=optuna.samplers.TPESampler(seed = seed,
                                                                    constant_liar=True),
                                 # storage="sqlite:///db.sqlite3",
@@ -59,7 +62,8 @@ def main(model_to_run, model_name, graph_name: str| int | None = None):
     study.set_user_attr("contributor", "Will Jardee")
     study.set_user_attr("model", model_name)
     study.set_user_attr("seed", seed)
-    study.optimize(model_to_run, n_trials=n_trials, n_jobs=n_jobs)
+    print(study.pruner)
+    # study.optimize(model_to_run, n_trials=n_trials, n_jobs=n_jobs)
 
     with open(f"{save_dir}/{model_name}_{dandt.strftime('%Y-%m-%d_%H-%M-%S')}.txt", "w") as file_name:
         file_name.write('Best trial:')

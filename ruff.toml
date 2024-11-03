@@ -1,0 +1,35 @@
+# Tell Ruff where to look for code
+src = ["src"]
+
+# Exclude these files/directories
+exclude = [
+    ".tox",
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+select = ["E", "F", "I"]
+ignore = []
+
+line-length = 88
+target-version = "py39"
+
+[per-file-ignores]
+"__init__.py" = ["F401"]
+
+# Docstring standards
+[pydocstyle]
+convention = "google"
+
+[flake8-quotes]
+docstring-quotes = "double"
+
+[pylint]
+max-args = 5
+max-returns = 3
+
+# Checks for complexity in code
+# [mccabe]
+# max-complexity = 10

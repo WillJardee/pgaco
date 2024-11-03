@@ -2,10 +2,14 @@
 from pathlib import Path
 
 import numpy as np
-from scipy.spatial.distance import euclidean
 
 base_dir = Path(__file__).resolve().parent.parent
 tsplib_dir = base_dir / 'tsplib'
+
+def euclidean(vec1: list[float], vec2: list[float]) -> float:
+    """Returns the L2 distance between two vectors."""
+    assert len(vec1) == len(vec2)
+    return sum([(i - j)**2 for i in vec1 for j in vec2])**(1/2)
 
 def format_metadata(meta: str) -> dict[str, str]:
     return dict([(x[0].strip(), x[1].strip()) for x in [i.split(":") for i in meta.split("\n") if i.strip() != ""]])
