@@ -1,10 +1,6 @@
 import numpy as np
 from tqdm import tqdm
-import networkx as nx
-import ast
-import pickle
-try: from .ACO import ACO_TSP
-except: from ACO import ACO_TSP
+from pgaco.model.ACO import ACO_TSP
 
 class ADACO(ACO_TSP):
     """Implementation of ACO with log policy gradient update
@@ -18,7 +14,8 @@ class ADACO(ACO_TSP):
                  **kwargs) -> None:
         """Class specific params."""
         self.allowed_params = {"learning_rate", "value_param",
-                               "advantage_func", "annealing_factor"}
+                               "advantage_func", "annealing_factor",
+                               "decay_rate"}
         super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "Adaptive ACO"
         self._decay_rate = kwargs.get("decay_rate", 0.95)
@@ -45,6 +42,8 @@ if __name__ == "__main__":
 
     print("Running ADACO")
     ACA_runs = []
+    aca = ADACO(distance_matrix,
+                  max_iter = iterations)
 
     for test in tqdm(range(runs)):
         aca = ADACO(distance_matrix,

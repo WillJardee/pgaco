@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 
 from pgaco.model.ACO import ACO_TSP
@@ -114,15 +116,9 @@ class PGACO_LOG(ACO_TSP):
             self._gradient_add(solution[-2], solution[-1], allow_list, prob, advantage)
         return np.array(solution, dtype=int)
 
-    def run(self, max_iter=None, metric= ["best"]):
-        """Runs through solving the TSP."""
-        if self.func is None or self.distance_matrix is None:
-            raise ValueError(f"func and distance_matrix must be set to run {self._name_}")
-
-        self.set_metrics(metric)
-        self.metrics = metric
-        for i in range(max_iter or self._max_iter):
-            self.iteration = i
+    def take_step(self, steps=1) -> Tuple[float, np.ndarray]:
+        for i in range(steps):
+            self._iteration += i
             self._prob_rule_update()
 
             # Generate solutions
@@ -141,7 +137,7 @@ class PGACO_LOG(ACO_TSP):
             self.generation_best_Y.append(y)
 
             # Save check
-            if self.iteration % self._checkpoint_res == 0:
+            if self._iteration % self._checkpoint_res == 0:
                 if self.save_file is not None: self._save()
                 if self.checkpoint_file is not None: self._checkpoint()
             self._learning_rate = self._learning_rate * (1 - self._annealing_factor)

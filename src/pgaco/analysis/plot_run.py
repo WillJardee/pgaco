@@ -1,9 +1,7 @@
 import multiprocessing
-import concurrent.futures
 from functools import partial
 
 import numpy as np
-import networkx as nx
 import matplotlib.pyplot as plt
 
 from pgaco.model.ACO import ACO_TSP
@@ -123,26 +121,10 @@ def run_pgaco3(distance_matrix, seed):
     aco.run()
     return aco.generation_best_Y, aco._name_ + " w/ clip"
 
-def run_alg(args):
-    alg, distance_matrix, _ = args
-    return alg(distance_matrix)
-
 def parallel_aco(alg, runs, distance_matrix):
-    # with multiprocessing.Pool() as pool:
-    #     run_func = partial(alg, distance_matrix, iters)
-    #     results = pool.map(run_func, range(runs))
-
-    # with multiprocessing.Pool() as pool:
-    #     args = [(run_aco, distance_matrix, i) for i in range(runs)]
-    #     results = pool.map(run_alg, args)
-    # results = [alg(distance_matrix, seed=i) for i in range(runs)]
-
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        # Submit the same function and input to the executor 10 times
-        futures = [executor.submit(alg, distance_matrix, i) for i in range(runs)]
-
-        # Collect results as they complete
-        results = [future.result() for future in concurrent.futures.as_completed(futures)]
+    with multiprocessing.Pool() as pool:
+        run_func = partial(alg, distance_matrix)
+        results = pool.map(run_func, range(runs))
 
     aco_runs = [result[0] for result in results]
     aco_name = results[0][1]  # Assuming all runs have the same name

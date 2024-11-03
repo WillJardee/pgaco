@@ -1,10 +1,5 @@
 import numpy as np
-from tqdm import tqdm
-import networkx as nx
-import ast
-import pickle
-try: from .PGACO_LOG import PGACO_LOG
-except: from PGACO_LOG import PGACO_LOG
+from pgaco.model.PGACO_LOG import PGACO_LOG
 
 
 class PGACO_RATIO(PGACO_LOG):

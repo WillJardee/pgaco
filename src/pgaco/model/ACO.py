@@ -11,7 +11,7 @@ Change Log:
 - made parameters kwargs
 - removed branching factor
 """
-
+from typing import Tuple
 import pickle
 import ast
 import warnings
@@ -69,10 +69,13 @@ class ACO_TSP:
         self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
         self._replay = False if self._replay_size == -1 else True
         if not self._replay: self._replay_size = self._size_pop
-        self._min_tau           =   kwargs.get("min_tau", 0.001 * self._min_dist) # min value; helps erogtic behavior and NaNs
+        self._min_tau           =   kwargs.get("min_tau", 1/self._max_dist) # min value; helps erogtic behavior and NaNs
         self._max_tau           =   kwargs.get("max_tau", self._max_dist) # max value; helps with runaway behavior
         self._minmax_adaptive   =   kwargs.get("minmax", True)
-        self._min = False if (self._min_tau == -1 and not self._minmax_adaptive) else True
+        # self._min = False if (self._min_tau == -1 and not self._minmax_adaptive) else True
+        # min always has to be taken or else we get an undefined point
+        if self._min_tau == -1: self._min_tau = self._min_dist * 1e-7
+        self._min = True
         self._max = False if (self._max_tau == -1 and not self._minmax_adaptive) else True
         self._bias_func         =   kwargs.get("bias_func", "inv_weight") # Uniform and inv_weight
         self.save_file          =   kwargs.get("save_file", None) # relative path
@@ -81,6 +84,7 @@ class ACO_TSP:
         self._seed              =   kwargs.get("seed", None)
 
         self._rng               =   np.random.default_rng(seed=self._seed)
+        self._iteration         =   0
 
         # building workspace
         self._heuristic_table = np.ones((self._dim, self._dim)) * (self._max_tau if self._max else 1) # This is where the parameters of the learned policy are stored
@@ -100,9 +104,9 @@ class ACO_TSP:
 
         num_list = np.arange(self._dim)
         self._replay_buffer = np.array([self._rng.permutation(num_list) for _ in range(self._replay_size)])
-        self._replay_buffer_fit = [self.func(i) for i in self._replay_buffer]
+        self._replay_buffer_fit = np.array([self.func(i) for i in self._replay_buffer])
         self.generation_best_X, self.generation_best_Y = [], []  # storing the best ant at each epoch
-        self.current_best_X, self.current_best_Y = np.array([]), self._replay_buffer_fit[0]
+        self.current_best_Y, self.current_best_X = self._replay_buffer_fit[0], np.array([])
         self.x_best_history, self.y_best_history = self.generation_best_X, self.generation_best_Y
         self.best_x, self.best_y = None, None
         if self.save_file is not None: self._save_params()
@@ -113,12 +117,6 @@ class ACO_TSP:
             if key in self.allowed_params:
                 passkwargs.pop(key)
         return passkwargs
-
-    def set_metrics(self, metrics):
-        if "best" in metrics:
-            self.metric_best = True
-        if "branching_factor" in metrics:
-            self.metric_branching_factor = True
 
     def _save_params(self, filename: str = ""):
 
@@ -159,12 +157,12 @@ class ACO_TSP:
     def _restore(self) -> None:
         pass
 
-    def _path_len(self, path):
+    def _path_len(self, path) -> float:
         length = len(path)
         cost = 0
         for i in range(length + 1):
             cost += self.distance_matrix[path[i%length]][path[(i+1)%length]]
-        return cost
+        return float(cost)
 
     def _gradient(self) -> np.ndarray:
         """Calculate the update rule."""
@@ -238,7 +236,7 @@ class ACO_TSP:
         self._replay_buffer_fit = full_fitness[keep_indices]
 
 
-    def _get_best(self, n: int = 1, sort: bool = False):
+    def _get_best(self, n: int = 1, sort: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """Returns the n best values in the replay buffer"""
         assert type(sort) == bool
 
@@ -255,15 +253,10 @@ class ACO_TSP:
             raise ValueError("self._get_best only supports up to the length of the replay_buffer")
 
 
-    def run(self, max_iter=None, metric= ["best"]):
-        """Runs through solving the TSP."""
-        if self.func is None or self.distance_matrix is None:
-            raise ValueError(f"func and distance_matrix must be set to run {self._name_}")
-
-        self.set_metrics(metric)
-        self.metrics = metric
-        for i in range(max_iter or self._max_iter):
-            self.iteration = i
+    def take_step(self, steps=1) -> Tuple[float, np.ndarray]:
+        """Take [steps; default=1] steps of the search algorithm"""
+        for i in range(steps):
+            self._iteration += i
             self._prob_rule_update()
 
             # Generate solutions
@@ -275,15 +268,28 @@ class ACO_TSP:
 
             # Get best solution and save it
             y, x = self._get_best(n=1)
-            if y <= self.current_best_Y: self.current_best_Y, self.current_best_X = y, x
+            if y <= self.current_best_Y: self.current_best_Y, self.current_best_X = float(y), x
             self.generation_best_Y.append(y)
 
             # Save check
-            if self.iteration % self._checkpoint_res == 0:
+            if self._iteration % self._checkpoint_res == 0:
                 if self.save_file is not None: self._save()
                 if self.checkpoint_file is not None: self._checkpoint()
 
-        return self.current_best_Y, self.current_best_X
+        return float(self.current_best_Y), self.current_best_X
+
+
+    def run(self, max_iter=None):
+        """Runs through solving the TSP."""
+        if self.func is None or self.distance_matrix is None:
+            raise ValueError(f"func and distance_matrix must be set to run {self._name_}")
+
+        num_iter = max_iter or self._max_iter
+
+        if self._iteration > 0:
+            warnings.warn(f"The model has already make {self._iteration}, taking another {num_iter} steps. Recreate the class to reset the search")
+
+        return self.take_step(steps=num_iter)
 
 if __name__ == "__main__":
     from tqdm import tqdm
@@ -295,6 +301,9 @@ if __name__ == "__main__":
 
     print("Running ACA")
     ACA_runs = []
+    aca = ACO_TSP(distance_matrix,
+                  max_iter = iterations,
+                  replay_size = -1)
 
     for test in tqdm(range(runs)):
         save_file = f"ACO_run_{test}.txt"
