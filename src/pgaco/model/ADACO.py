@@ -36,10 +36,14 @@ class ADACO(ACO_TSP):
 
     def _gradient_update(self) -> None:
         """Take an gradient step."""
-        grad = self._gradient()
-        self._decay_grad = self._decay_rate * self._decay_grad + (1-self._decay_rate) * grad**2
+        tot_grad = np.zeros(self._heuristic_table.shape)
+        for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
+            tot_grad += self._gradient(solution, cost)
+        tot_grad = tot_grad/self._replay_size
+
+        self._decay_grad = self._decay_rate * self._decay_grad + (1-self._decay_rate) * tot_grad**2
         epsilon = 1e-7
-        hess = grad * np.sqrt((self._delta_decay_grad + epsilon) / (self._decay_grad + epsilon) )
+        hess = tot_grad * np.sqrt((self._delta_decay_grad + epsilon) / (self._decay_grad + epsilon) )
         self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table - hess
         self._minmax()
         self._delta_decay_grad = self._decay_rate * self._delta_decay_grad + (1-self._decay_rate) * (hess * hess)

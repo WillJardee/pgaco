@@ -56,7 +56,8 @@ class ACO_TSP:
         self.allowed_params = {"size_pop", "max_iter", "alpha", "beta",
                                "evap_rate", "min_tau", "max_tau", "minmax",
                                "bias_func", "save_file", "checkpoint_file",
-                               "checkpoint_res", "replay_size", "seed"}
+                               "checkpoint_res", "replay_size", "replay_rule",
+                               "seed", "evict"}
         for key in kwargs:
             if key not in self.allowed_params:
                 warnings.warn(f"Parameter '{key}' is not recognized and will be ignored.",
@@ -68,9 +69,11 @@ class ACO_TSP:
         self._alpha             =   kwargs.get("alpha", 1)
         self._beta              =   kwargs.get("beta", 2)
         self._evap_rate         =   kwargs.get("evap_rate", 0.1)
+        # See <https://www.mdpi.com/1999-4893/16/5/251> for a replay buffer implementation
         self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
-        self._replay = False if self._replay_size == -1 else True
-        if not self._replay:
+        assert self._replay_size > 0
+        self._replay_rule       =   kwargs.get("replay_rule", "elite") # assumes no replay buffer
+        if self._replay_rule == "none":
             self._replay_size = self._size_pop
         self._min_tau           =   kwargs.get("min_tau", 1/self._max_dist) # min value; helps erogtic behavior and NaNs
         self._max_tau           =   kwargs.get("max_tau", self._max_dist) # max value; helps with runaway behavior
@@ -174,7 +177,7 @@ class ACO_TSP:
         sol_len = len(solution)
         # add 1/(path len) to each edge
         grad = np.ones(self._heuristic_table.shape)
-        for k in range(sol_len + 1):
+        for k in range(sol_len):
             n1, n2 = solution[(k)%sol_len], solution[(k+1)%sol_len]
             grad[n1, n2] += 1 / cost
         return grad
@@ -195,7 +198,7 @@ class ACO_TSP:
         tot_grad = np.zeros(self._heuristic_table.shape)
         for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
             tot_grad += self._gradient(solution, cost)
-        # tot_grad = tot_grad/self._replay_size
+        tot_grad = tot_grad/self._replay_size
 
         self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * tot_grad
         self._minmax()
@@ -228,21 +231,29 @@ class ACO_TSP:
         probs /= probs.sum()
         return probs[node]
 
-    def _add_replay_buffer(self, new_fitness, new_solutions, sort: bool = True) -> None:
-        """Add the provided list to the replay buffer, prefering new values when relevant."""
-        if not self._replay: # if we are not doing replay, just return the values
-            self._replay_buffer = new_solutions
-            self._replay_buffer_fit = new_fitness
-            return
-
+    def _elite_replay_rule(self, new_fitness, new_solutions) -> None:
         full_buffer = np.concatenate([new_solutions, self._replay_buffer])
         full_fitness = np.concatenate([new_fitness, self._replay_buffer_fit])
-        if sort:
-            keep_indices = np.argsort(full_fitness)[:self._replay_size]
-        else:
-            keep_indices = np.argpartition(full_fitness, kth=self._replay_size)[:self._replay_size]
+        keep_indices = np.argpartition(full_fitness, kth=self._replay_size)[:self._replay_size]
         self._replay_buffer = full_buffer[keep_indices]
         self._replay_buffer_fit = full_fitness[keep_indices]
+
+    def _evict_replay_rule(self, new_fitness, new_solutions) -> None:
+        full_buffer = np.concatenate([new_solutions, self._replay_buffer])
+        full_fitness = np.concatenate([new_fitness, self._replay_buffer_fit])
+        self._replay_buffer = full_buffer[:self._replay_size]
+        self._replay_buffer_fit = full_fitness[:self._replay_size]
+
+    def _add_replay_buffer(self, new_fitness, new_solutions) -> None:
+        """Add the provided list to the replay buffer, prefering new values when relevant."""
+        match self._replay_rule:
+            case "none":
+                self._replay_buffer = new_solutions
+                self._replay_buffer_fit = new_fitness
+            case "elite":
+                self._elite_replay_rule(new_fitness, new_solutions)
+            case "evict":
+                self._evict_replay_rule
 
 
     def _get_best(self, n: int = 1, sort: bool = False) -> tuple[np.ndarray, np.ndarray]:
@@ -310,20 +321,17 @@ if __name__ == "__main__":
     size = 100
     runs = 5
     iterations = 100
-    distance_matrix = np.random.randint(1, 10, size**2).reshape((size, size))
+    distance_matrix = np.random.randint(1, 100, size**2).reshape((size, size))
 
-    print("Running ACA")
+    print("Running ACO")
     ACA_runs = []
     aca = ACO_TSP(distance_matrix,
-                  max_iter = iterations,
-                  replay_size = -1)
+                  max_iter = iterations)
 
     for test in tqdm(range(runs)):
         save_file = f"ACO_run_{test}.txt"
         aca = ACO_TSP(distance_matrix,
-                      max_iter = iterations,
-                      save_file = save_file,
-                      replay_size = -1)
+                      max_iter = iterations)
         skaco_cost, skaco_sol = aca.run()
         ACA_runs.append(skaco_cost)
 

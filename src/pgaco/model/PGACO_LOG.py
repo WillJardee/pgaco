@@ -60,35 +60,54 @@ class PGACO_LOG(ACO_TSP):
                 grad[n1, point] -= self._alpha * advantage /self._heuristic_table[n1, point] * prob_val
         return grad
 
+    def _gradient_update(self) -> None:
+        """Take an gradient step."""
+        tot_grad = np.zeros(self._heuristic_table.shape)
+        for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
+            tot_grad += self._gradient(solution, cost)
+        tot_grad = tot_grad/self._replay_size
+
+        self._heuristic_table = self._heuristic_table + self._learning_rate * tot_grad
+        self._minmax()
+
     def _advantage_local(self, current_point, next_point, allow_list):
         """Advantage function of the form: 1/C(x) - Avg(1/C(x))."""
         return 1/self.distance_matrix[current_point, next_point] - np.average(1/self.distance_matrix[current_point, allow_list])
 
-    def _advantage_path(self, **kwargs):
-        """
-        Calculate the advantage function.
+    def _advantage_path(self, path):
+        """Advantage function of the form: 1/C(s_t) - Avg(1/C(s_t))."""
+        return 1/self.func(path) - 1/self._avg_cost[len(path)-1]
 
-        This function computes the advantage using the formula:
-        1/C(s_{t}) - Avg(1/C(s_{t-1}))
+    def _quality(self, current_point, next_point):
+        """Quality Function (_heuristic_table)."""
+        return self._heuristic_table[current_point, next_point]
 
-        Returns
-        -------
-        float
-            The calculated advantage value.
+    def _reward(self, current_point, next_point):
+        """Reward function (1/C(x))"""
+        return 1/self.distance_matrix[current_point, next_point]
 
-        """
-        pass
+
 
     def _advantage(self, **kwargs):
         """Return advantage function defined in `advantage`."""
         valid_adv = {"local", "path"}
         match self._adv_func:
             case "local":
-                return self._advantage_local(**kwargs)
+                return self._advantage_local(kwargs.get("current_point"), kwargs.get("next_point"), kwargs.get("allow_list"))
             case "path":
-                return self._advantage_path(**kwargs)
+                return self._advantage_path(kwargs.get("path"))
+            case "quality":
+                return self._quality(kwargs.get("current_point"), kwargs.get("next_point"))
+            case "reward":
+                return self._reward(kwargs.get("current_point"), kwargs.get("next_point"))
             case _:
                 raise ValueError(f"Advantage function not defined. Vaild choices: {valid_adv}")
+
+    def take_step(self, steps=1) -> tuple[float, np.ndarray]:
+        if self._adv_func in ["path"]:
+            self._avg_cost = [np.mean([self.func(s[:k]) for s in self._replay_buffer]) for k in range(self._dim)]
+        score, solution = super().take_step(steps)
+        return score, solution
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
