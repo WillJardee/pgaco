@@ -169,16 +169,15 @@ class ACO_TSP:
             cost += self.distance_matrix[path[i%length]][path[(i+1)%length]]
         return float(cost)
 
-    def _gradient(self) -> np.ndarray:
-        """Calculate the update rule."""
-        delta = np.zeros(self._heuristic_table.shape)
-        for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-            sol_len = len(solution)
-            # add 1/(path len) to each edge
-            for k in range(sol_len + 1):
-                n1, n2 = solution[(k)%sol_len], solution[(k+1)%sol_len]
-                delta[n1, n2] += 1 / cost
-        return delta
+    def _gradient(self, solution, cost) -> np.ndarray:
+        """Calculate the gradient for a single example."""
+        sol_len = len(solution)
+        # add 1/(path len) to each edge
+        grad = np.ones(self._heuristic_table.shape)
+        for k in range(sol_len + 1):
+            n1, n2 = solution[(k)%sol_len], solution[(k+1)%sol_len]
+            grad[n1, n2] += 1 / cost
+        return grad
 
     def _minmax(self) -> None:
         if self._max:
@@ -193,7 +192,12 @@ class ACO_TSP:
 
     def _gradient_update(self) -> None:
         """Take an gradient step."""
-        self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * self._gradient()
+        tot_grad = np.zeros(self._heuristic_table.shape)
+        for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
+            tot_grad += self._gradient(solution, cost)
+        # tot_grad = tot_grad/self._replay_size
+
+        self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * tot_grad
         self._minmax()
 
 

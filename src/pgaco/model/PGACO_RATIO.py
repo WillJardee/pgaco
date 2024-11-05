@@ -34,25 +34,35 @@ class PGACO_RATIO(PGACO_LOG):
         self._epsilon = kwargs.get("epsilon", 0.1)
         self._clip = False if self._epsilon == -1 else True
 
-    def _gradient_add(self, current_point, next_point, allow_list, prob, advantage) -> None:
-        """Add a value to the running gradient."""
-        norm_term = self._prob_matrix[current_point, allow_list].sum()
-        norm_term_old = self._prob_table_last_gen[current_point, allow_list].sum()
-        prob_chosen = self._prob_matrix[current_point, next_point]/norm_term
-        prob_chosen_old = self._prob_table_last_gen[current_point, next_point]/norm_term_old
-        prob_ratio = (prob_chosen/prob_chosen_old)
+    def _gradient(self, solution, cost) -> np.ndarray:
+        """Take the sum of all gradients in the replay buffer."""
+        # add 1/(path len) to each edge
+        grad = np.ones(self._heuristic_table.shape)
+        for k in range(len(solution) - 1):
+            n1, n2 = solution[k], solution[k+1]
+            allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
+            prob = self._prob_matrix[solution[k], allow_list]
+            prob = prob / prob.sum()
+            advantage = self._advantage_local(current_point=solution[-2], next_point=solution[-1], allow_list=allow_list)
 
-        if self._clip:
-            if advantage > 0:
-                if prob_ratio > (1 + self._epsilon):
-                    return
-            elif advantage < 0:
-                if prob_ratio < (1 - self._epsilon):
-                    return
+            norm_term = self._prob_matrix[n1, allow_list].sum()
+            norm_term_old = self._prob_table_last_gen[n1, allow_list].sum()
+            prob_chosen = self._prob_matrix[n1, n2]/norm_term
+            prob_chosen_old = self._prob_table_last_gen[n1, n2]/norm_term_old
+            prob_ratio = (prob_chosen/prob_chosen_old)
 
-        self._running_gradient[current_point, next_point] += self._alpha * advantage * prob_ratio
-        for point, prob_val in zip(allow_list, prob):
-            self._running_gradient[current_point, point] -= self._alpha * advantage * prob_ratio * prob_val
+            if self._clip:
+                if advantage > 0:
+                    if prob_ratio > (1 + self._epsilon):
+                        continue
+                elif advantage < 0:
+                    if prob_ratio < (1 - self._epsilon):
+                        continue
+
+            grad[n1, n2] += self._alpha * advantage * prob_ratio
+            for point, prob_val in zip(allow_list, prob):
+                grad[n1, point] -= self._alpha * advantage * prob_ratio * prob_val
+        return grad
 
     def _gradient_update(self) -> None:
         super()._gradient_update()
