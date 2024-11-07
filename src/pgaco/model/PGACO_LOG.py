@@ -35,20 +35,18 @@ class PGACO_LOG(ACO_TSP):
                  distance_matrix: np.ndarray,
                  **kwargs) -> None:
         """Class specific params."""
-        self.allowed_params = {"learning_rate", "value_param",
-                               "advantage_func", "annealing_factor"}
+        self.allowed_params = {"learning_rate", "advantage_func",
+                               "annealing_factor"}
         super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "Log Policy"
-        self._learning_rate = kwargs.get("learning_rate", 100)
-        # self._running_gradient = np.zeros((self._dim, self._dim))
-        # self._replay_buffer_grads = np.array([self._running_gradient for _ in range(self._replay_size)])
-        self._adv_func = kwargs.get("advantage_func", "local")
+        self._learning_rate = kwargs.get("learning_rate", 0.01)
+        self._adv_func = kwargs.get("advantage_func", "quality")
         self._annealing_factor = kwargs.get("annealing_factor", 0.01)
 
     def _gradient(self, solution, cost) -> np.ndarray:
         """Take the sum of all gradients in the replay buffer."""
         # add 1/(path len) to each edge
-        grad = np.ones(self._heuristic_table.shape)
+        grad = np.zeros(self._heuristic_table.shape)
         for k in range(len(solution) - 1):
             n1, n2 = solution[k], solution[k+1]
             allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
@@ -67,7 +65,7 @@ class PGACO_LOG(ACO_TSP):
             tot_grad += self._gradient(solution, cost)
         tot_grad = tot_grad/self._replay_size
 
-        self._heuristic_table = self._heuristic_table + self._learning_rate * tot_grad
+        self._heuristic_table = self._heuristic_table - self._learning_rate * tot_grad
         self._minmax()
 
     def _advantage_local(self, current_point, next_point, allow_list):
@@ -85,8 +83,6 @@ class PGACO_LOG(ACO_TSP):
     def _reward(self, current_point, next_point):
         """Reward function (1/C(x))"""
         return 1/self.distance_matrix[current_point, next_point]
-
-
 
     def _advantage(self, **kwargs):
         """Return advantage function defined in `advantage`."""

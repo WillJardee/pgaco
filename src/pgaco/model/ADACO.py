@@ -25,9 +25,7 @@ class ADACO(ACO_TSP):
                  distance_matrix: np.ndarray,
                  **kwargs) -> None:
         """Class specific params."""
-        self.allowed_params = {"learning_rate", "value_param",
-                               "advantage_func", "annealing_factor",
-                               "decay_rate"}
+        self.allowed_params = {"decay_rate"}
         super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "Adaptive ACO"
         self._decay_rate = kwargs.get("decay_rate", 0.95)

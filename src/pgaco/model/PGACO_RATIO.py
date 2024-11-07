@@ -37,7 +37,7 @@ class PGACO_RATIO(PGACO_LOG):
     def _gradient(self, solution, cost) -> np.ndarray:
         """Take the sum of all gradients in the replay buffer."""
         # add 1/(path len) to each edge
-        grad = np.ones(self._heuristic_table.shape)
+        grad = np.zeros(self._heuristic_table.shape)
         for k in range(len(solution) - 1):
             n1, n2 = solution[k], solution[k+1]
             allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points

@@ -25,10 +25,11 @@ class ANTQ(ACO_TSP):
                  distance_matrix: np.ndarray,
                  **kwargs) -> None:
         """Class specific params."""
-        self.allowed_params = {"learning_rate", "decay_rate", "off_policy"}
+        self.allowed_params = {"learning_rate", "discount_factor",
+                               "off_policy"}
         super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "ANT-Q"
-        self._learning_rate     = kwargs.get("learning_rate", 0.01)
+        self._learning_rate     = kwargs.get("learning_rate", 0.1)
         self._discount_factor   = kwargs.get("discount_factor", 0.1)
         self._off_policy        = kwargs.get("off_policy", True)
         self._running_grad      = np.zeros(self._heuristic_table.shape)
@@ -38,7 +39,7 @@ class ANTQ(ACO_TSP):
         """Calculate the gradient for a single example."""
         sol_len = len(solution)
         # add 1/(path len) to each edge
-        grad = np.ones(self._heuristic_table.shape)
+        grad = np.zeros(self._heuristic_table.shape)
         for k in range(sol_len):
             n1, n2 = solution[(k)%sol_len], solution[(k+1)%sol_len]
             grad[n1, n2] += 1 / cost

@@ -70,13 +70,14 @@ class ACO_TSP:
         self._beta              =   kwargs.get("beta", 2)
         self._evap_rate         =   kwargs.get("evap_rate", 0.1)
         # See <https://www.mdpi.com/1999-4893/16/5/251> for a replay buffer implementation
+        # self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
         self._replay_size       =   kwargs.get("replay_size", self._size_pop) # assumes no replay buffer
         assert self._replay_size > 0
         self._replay_rule       =   kwargs.get("replay_rule", "elite") # assumes no replay buffer
         if self._replay_rule == "none":
             self._replay_size = self._size_pop
-        self._min_tau           =   kwargs.get("min_tau", 1/self._max_dist) # min value; helps erogtic behavior and NaNs
-        self._max_tau           =   kwargs.get("max_tau", self._max_dist) # max value; helps with runaway behavior
+        self._max_tau           =   kwargs.get("max_tau", 1/(self._dim * self._min_dist)) # max value; helps with runaway behavior
+        self._min_tau           =   kwargs.get("min_tau", self._max_tau/(2 * self._dim)) # min value; helps erogtic behavior and NaNs
         self._minmax_adaptive   =   kwargs.get("minmax", True)
         # self._min = False if (self._min_tau == -1 and not self._minmax_adaptive) else True
         # min always has to be taken or else we get an undefined point
@@ -94,7 +95,7 @@ class ACO_TSP:
         self._iteration         =   0
 
         # building workspace
-        self._heuristic_table = np.ones(tuple([self._dim, self._dim])) * (self._max_tau if self._max else 1) # This is where the parameters of the learned policy are stored
+        self._heuristic_table = np.ones(tuple([self._dim, self._dim])) * (self._min_tau if self._min else 1) # This is where the parameters of the learned policy are stored
         self.distance_matrix += 1e-10 * np.eye(self._dim) # Helps with NaN and stability of some methods
 
         # set probability bias
@@ -168,7 +169,7 @@ class ACO_TSP:
     def _path_len(self, path) -> float:
         length = len(path)
         cost = 0
-        for i in range(length + 1):
+        for i in range(length):
             cost += self.distance_matrix[path[i%length]][path[(i+1)%length]]
         return float(cost)
 
@@ -176,7 +177,7 @@ class ACO_TSP:
         """Calculate the gradient for a single example."""
         sol_len = len(solution)
         # add 1/(path len) to each edge
-        grad = np.ones(self._heuristic_table.shape)
+        grad = np.zeros(self._heuristic_table.shape)
         for k in range(sol_len):
             n1, n2 = solution[(k)%sol_len], solution[(k+1)%sol_len]
             grad[n1, n2] += 1 / cost
@@ -215,13 +216,14 @@ class ACO_TSP:
             allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
             prob = self._prob_matrix[solution[k], allow_list]
             prob = prob / prob.sum()
-            next_point = self._rng.choice(allow_list, size=1, p=prob)[0] # roulette selection
+            next_point = self._rng.choice(allow_list, p=prob) # roulette selection
             solution.append(next_point)
         return np.array(solution, dtype=int)
 
     def _prob_rule_update(self) -> None:
         """Update the probability matrix."""
         self._prob_matrix = (self._heuristic_table ** self._alpha) * (self._prob_bias ** self._beta)
+        # print(self._prob_matrix)
 
     def _prob_rule_node(self, node: int, taboo_list: set[int] | list[int]) -> float:
         """Return the probability of an action given a state and history."""
