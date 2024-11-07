@@ -7,8 +7,10 @@ def model(trial) -> float:
     size_pop        = trial.suggest_int("size_pop", size_pop_down, size_pop_up, log=True)
     alpha           = trial.suggest_int("alpha", alpha_down, alpha_up)
     beta            = trial.suggest_int("beta", beta_down, beta_up)
-    learning_rate   = trial.suggest_float("learning_rate", 1e-3, 1e6)
+    learning_rate   = trial.suggest_float("learning_rate", 1e-4, 1e2, log=True)
+    annealing_fator = trial.suggest_float("annealing_factor", 0.001, 0.99)
     epsilon         = trial.suggest_float("epsilon", 0.001, 0.99)
+
 
     replay_size = trial.suggest_int("replay_size", replay_size_down, replay_size_up)
 
@@ -19,7 +21,8 @@ def model(trial) -> float:
                       alpha         = alpha,
                       beta          = beta,
                       learning_rate = learning_rate,
-                      epsilon       = epsilon,   # disables clipping
+                      annealing_fator = annealing_fator,
+                      epsilon       = epsilon,
                       replay_size   = replay_size)
 
     for i in range(max_iter // pruning_period):

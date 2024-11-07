@@ -9,8 +9,7 @@ def model(trial) -> float:
     beta        = trial.suggest_int("beta", beta_down, beta_up)
     evap_rate   = trial.suggest_float("evap_rate", evap_rate_down, evap_rate_up)
 
-    use_replay  = trial.suggest_categorical('use_replay', ["disabled", "enabled"])
-    replay_size = -1 if use_replay == "disabled" else trial.suggest_int("replay_size", replay_size_down, replay_size_up)
+    replay_size = trial.suggest_int("replay_size", replay_size_down, replay_size_up)
 
     aco = ACO_TSP(graph,
                   seed          =   seed,

@@ -9,9 +9,9 @@ import pgaco
 
 pruning_period  = 1    # period to check pruning at
 n_trials        = 200
-n_jobs          = 4     # -1 for as many as possible
+n_jobs          = 8     # -1 for as many as possible
 seed            = 42
-max_iter        = 100
+max_iter        = 200
 default_graph   = "ali535.tsp"
 model_name      = "ACO"
 module_path     = dirname(pgaco.__spec__.origin)
@@ -30,7 +30,8 @@ def get_graph(name: str | int) -> np.ndarray:
     finally:
         if isinstance(name, int):
             size = int(name)
-            dist_mat = np.random.randint(gen_graph_down, gen_graph_up, size**2).reshape((size, size))
+            rng = np.random.default_rng(seed)
+            dist_mat = rng.integers(gen_graph_down, gen_graph_up, [size, size])
             return  dist_mat.astype(np.float64)
         elif isinstance(name, str):
             from pgaco.utils.tsplib_reader import TSPGraph
@@ -50,8 +51,8 @@ def main(model_to_run, model_name, graph_name: str| int | None = None):
     )
 
     study = optuna.create_study(direction="minimize",
-                                # pruner=optuna.pruners.SuccessiveHalvingPruner(),
-                                pruner=optuna.pruners.NopPruner(),
+                                pruner=optuna.pruners.SuccessiveHalvingPruner(),
+                                # pruner=optuna.pruners.NopPruner(),
                                 sampler=optuna.samplers.TPESampler(seed = seed,
                                                                    constant_liar=True),
                                 # storage="sqlite:///db.sqlite3",
@@ -62,8 +63,7 @@ def main(model_to_run, model_name, graph_name: str| int | None = None):
     study.set_user_attr("contributor", "Will Jardee")
     study.set_user_attr("model", model_name)
     study.set_user_attr("seed", seed)
-    print(study.pruner)
-    # study.optimize(model_to_run, n_trials=n_trials, n_jobs=n_jobs)
+    study.optimize(model_to_run, n_trials=n_trials, n_jobs=n_jobs)
 
     with open(f"{save_dir}/{model_name}_{dandt.strftime('%Y-%m-%d_%H-%M-%S')}.txt", "w") as file_name:
         file_name.write('Best trial:')

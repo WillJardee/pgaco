@@ -10,8 +10,7 @@ def model(trial) -> float:
     evap_rate   = trial.suggest_float("evap_rate", evap_rate_down, evap_rate_up)
     decay_rate  = trial.suggest_float("decay_rate", 0.001, 0.99)
 
-    use_replay  = trial.suggest_categorical('use_replay', ["disabled", "enabled"])
-    replay_size = -1 if use_replay == "disabled" else trial.suggest_int("replay_size", replay_size_down, replay_size_up)
+    replay_size = trial.suggest_int("replay_size", replay_size_down, replay_size_up)
 
     aco = ADACO(graph,
                 seed          =  seed,
