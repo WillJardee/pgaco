@@ -19,10 +19,10 @@ Example:
 
 import numpy as np
 
-from pgaco.model.PGACO_LOG import PGACO_LOG
+# from . import ACO
 
 
-class PGACO_RATIO(PGACO_LOG):
+class PGACO(ACO):
     """Implementation of ACA with prob ratio policy gradient update; clipping is on by default."""
 
     def __init__(self, distance_matrix, **kwargs) -> None:

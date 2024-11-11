@@ -15,14 +15,11 @@ Example:
     pgaco_log = PGACO_LOG(problem_instance, size_pop = 100, learning_rate=10_000)
     pgaco_log.run(max_iter=1000)
 """
-
-
 import numpy as np
+from . import ACO
 
-from pgaco.model.ACO import ACO_TSP
 
-
-class PGACO_LOG(ACO_TSP):
+class ACOSGD(ACO):
     """Implementation of ACO with log policy gradient update.
 
     Attributes

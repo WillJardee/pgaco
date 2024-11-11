@@ -9,10 +9,10 @@ Classes:
 
 import numpy as np
 
-from pgaco.model.ACO import ACO_TSP
+from . import ACO
 
 
-class ANTQ(ACO_TSP):
+class ANTQ(ACO):
     """Implementation of ACO with log policy gradient update.
 
     Attributes

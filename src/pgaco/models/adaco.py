@@ -9,10 +9,9 @@ Classes:
 
 import numpy as np
 
-from pgaco.model.ACO import ACO_TSP
+from . import ACOSGD
 
-
-class ADACO(ACO_TSP):
+class ADACO(ACOSGD):
     """Implementation of ACO with log policy gradient update.
 
     Attributes

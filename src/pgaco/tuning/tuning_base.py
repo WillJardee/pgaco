@@ -6,14 +6,15 @@ import optuna
 import numpy as np
 
 import pgaco
+from .burnin_pruner import BurnInPruner
 
 pruning_period  = 1    # period to check pruning at
 n_trials        = 200
-n_jobs          = 8     # -1 for as many as possible
+n_jobs          = -1     # -1 for as many as possible
 seed            = 42
-max_iter        = 200
-default_graph   = "ali535.tsp"
-model_name      = "ACO"
+max_iter        = 50
+default_graph   = 20
+model_name      = ""
 module_path     = dirname(pgaco.__spec__.origin)
 save_dir        = f"{module_path}/results/tuning_params"
 journal_name    = f"{model_name}.log"
@@ -51,7 +52,8 @@ def main(model_to_run, model_name, graph_name: str| int | None = None):
     )
 
     study = optuna.create_study(direction="minimize",
-                                pruner=optuna.pruners.SuccessiveHalvingPruner(),
+                                pruner=optuna.pruners.SuccessiveHalvingPruner(min_resource=max_iter**(1/2)),
+                                # pruner=BurnInPruner(n_burn_in_steps=10),
                                 # pruner=optuna.pruners.NopPruner(),
                                 sampler=optuna.samplers.TPESampler(seed = seed,
                                                                    constant_liar=True),

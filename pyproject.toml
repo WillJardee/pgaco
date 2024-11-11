@@ -14,9 +14,9 @@ maintainers = [
   {name = "Will Jardee", email = "willjardee@gmail.com"}
 ]
 classifiers = [
-    "Programming Language :: Python :: 3"
-    "License :: OSI Approced :: MIT License"
-    "Operating System :: Linux"
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Linux",
 ]
 license = {text = "MIT license"}
 requires-python = ">=3.9"
@@ -54,6 +54,10 @@ package-dir = {"" = "src"}
 [tool.setuptools.package-data]
 "*" = ["*.*"]
 
+
+
+[tool.pyright]
+typeCheckingMode = "basic"
 
 # Mypy
 # ----
