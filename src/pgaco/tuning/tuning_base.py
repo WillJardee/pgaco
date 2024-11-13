@@ -9,11 +9,11 @@ import pgaco
 from .burnin_pruner import BurnInPruner
 
 pruning_period  = 1    # period to check pruning at
-n_trials        = 200
+n_trials        = 20
 n_jobs          = -1     # -1 for as many as possible
 seed            = 42
-max_iter        = 50
-default_graph   = 20
+max_iter        = 20
+default_graph   = 10
 model_name      = ""
 module_path     = dirname(pgaco.__spec__.origin)
 save_dir        = f"{module_path}/results/tuning_params"

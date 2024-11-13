@@ -18,21 +18,36 @@ Example:
 
 
 import numpy as np
+from typing import Callable, Iterable
 
-# from . import ACO
+from pgaco.models import ACOSGD, path_len
 
 
-class PGACO(ACO):
+class ACOPG(ACOSGD):
     """Implementation of ACA with prob ratio policy gradient update; clipping is on by default."""
 
-    def __init__(self, distance_matrix, **kwargs) -> None:
+    def __init__(self,
+                 distance_matrix,
+                 func: Callable[[np.ndarray, Iterable], float] = path_len,
+                 *,
+                 epsilon: float = 0.1,
+                 **kwargs,
+                 ) -> None:
         """Class specific params."""
-        self.allowed_params = {"epsilon"}
-        super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "Policy Ratio"
+        super().__init__(distance_matrix, func, **kwargs)
         self._prob_table_last_gen = self._prob_matrix
-        self._epsilon = kwargs.get("epsilon", 0.1)
+        self._epsilon = epsilon
         self._clip = False if self._epsilon == -1 else True
+
+    @property
+    def _epsilon(self):
+        return self.__epsilon
+
+    @_epsilon.setter
+    def _epsilon(self, epsilon):
+        assert self._between(epsilon, lower=0, upper=1) or epsilon == -1
+        self.__epsilon = float(epsilon)
 
     def _gradient(self, solution, cost) -> np.ndarray:
         """Take the sum of all gradients in the replay buffer."""
@@ -69,29 +84,41 @@ class PGACO(ACO):
         self._prob_table_last_gen = self._prob_matrix
 
 
+def run_model1(distance_matrix, seed):
+    aco = ACOPG(distance_matrix,
+                size_pop      = 2,
+                seed          = seed)
+    aco.run(max_iter=max_iter)
+    return aco.generation_best_Y, aco.generation_policy_score, aco._name_
+
+def run_model2(distance_matrix, seed):
+    aco = ACOPG(distance_matrix,
+                size_pop      = 2,
+                epsilon       = -1,
+                seed          = seed)
+    aco.run(max_iter=max_iter)
+    return aco.generation_best_Y, aco.generation_policy_score, "Clipped " + aco._name_
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from tqdm import tqdm
-    size = 50
+    from pgaco.utils import get_graph, plot, parallel_runs
+    size = 20
     runs = 5
-    iterations = 100
-    distance_matrix = np.random.randint(1, 10, size**2).reshape((size, size))
+    max_iter = 1500
+    distance_matrix = get_graph(size)
 
-    print("Running GPACO with ratio update")
-    ACA_runs = []
+    print("running ACOPG")
+    aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model1, runs, distance_matrix, seed = 42)
+    plot(aco_runs, color="cyan", label=aco_name)
+    plot(aco_policy_runs, color="blue", label=aco_name + " policy")
 
-    for test in tqdm(range(runs)):
-        save_file = f"ACO_run_{test}.txt"
-        aca = PGACO_RATIO(distance_matrix,
-                          max_iter = iterations,
-                          save_file = save_file)
-        skaco_cost, skaco_sol = aca.run()
-        ACA_runs.append(skaco_cost)
+    print("running ACOPPO")
+    aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model2, runs, distance_matrix, seed = 42)
+    plot(aco_runs, color="green", label=aco_name)
+    plot(aco_policy_runs, color="lime", label=aco_name + " policy")
 
-    ACA_runs = np.array(ACA_runs)
-    print(f"PGACO_ratio: {ACA_runs.mean():.2f} +/- {ACA_runs.std():.2f}")
-
-    plt.plot(aca.generation_best_Y)
+    plt.legend()
+    plt.tight_layout()
     plt.show()
 
     pass

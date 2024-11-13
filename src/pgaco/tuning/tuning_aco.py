@@ -1,5 +1,5 @@
 from pgaco.tuning.tuning_base import *
-from pgaco.model.ACO import ACO_TSP
+from pgaco.models import ACO
 
 model_name = "ACO"
 
@@ -11,17 +11,14 @@ def model(trial) -> float:
 
     replay_size = trial.suggest_int("replay_size", replay_size_down, replay_size_up)
 
-    aco = ACO_TSP(graph,
-                  seed          =   seed,
-                  max_iter      =   max_iter,
-                  size_pop      =   size_pop,
-                  alpha         =   alpha,
-                  beta          =   beta,
-                  evap_rate     =   evap_rate,
-                  minmax        =   False,
-                  min_tau       =   -1,
-                  max_tau       =   -1,
-                  replay_size   =   replay_size)
+    aco = ACO(graph,
+              seed          =   seed,
+              size_pop      =   size_pop,
+              alpha         =   alpha,
+              beta          =   beta,
+              evap_rate     =   evap_rate,
+              minmax        =   False,
+              replay_size   =   replay_size)
 
     for i in range(max_iter // pruning_period):
         intermediate_score, _ = aco.take_step(steps=pruning_period)

@@ -16,7 +16,8 @@ Example:
     pgaco_log.run(max_iter=1000)
 """
 import numpy as np
-from . import ACO
+from typing import Callable, Iterable
+from pgaco.models import ACO, path_len
 
 
 class ACOSGD(ACO):
@@ -30,17 +31,57 @@ class ACOSGD(ACO):
 
     def __init__(self,
                  distance_matrix: np.ndarray,
+                 func: Callable[[np.ndarray, Iterable], float] = path_len,
+                 *,
+                 advantage_func: str = "quality",
+                 regularizer: str | None = "l2",
+                 annealing_factor: float = 0.01,
                  **kwargs) -> None:
         """Class specific params."""
-        self.allowed_params = {"learning_rate", "advantage_func",
-                               "annealing_factor"}
-        super().__init__(distance_matrix, **self._passkwargs(**kwargs))
-        self._name_ = "Log Policy"
-        self._learning_rate = kwargs.get("learning_rate", 0.01)
-        self._adv_func = kwargs.get("advantage_func", "quality")
-        self._annealing_factor = kwargs.get("annealing_factor", 0.01)
+        self._name_ = "ACO-SGD"
+        super().__init__(distance_matrix, func, **kwargs)
+        self._adv_func = advantage_func
+        self._regularizer = regularizer
+        self._annealing_factor = annealing_factor
 
-    def _gradient(self, solution, cost) -> np.ndarray:
+    """The following is collection of parameter validation rules."""
+    @property
+    def _evap_rate(self):
+        return self.__evap_rate
+
+    @_evap_rate.setter
+    def _evap_rate(self, evap_rate):
+        assert self._between(evap_rate, lower=0, inclusive=True)
+        self.__evap_rate = float(evap_rate)
+
+    @property
+    def _adv_func(self):
+        return self.__adv_func
+
+    @_adv_func.setter
+    def _adv_func(self, adv_func):
+        assert adv_func in ["quality", "local", "reward", "path", None]
+        self.__adv_func = adv_func
+
+    @property
+    def _regularizer(self):
+        return self.__regularizer
+
+    @_regularizer.setter
+    def _regularizer(self, regularizer):
+        assert regularizer in ["l2", None]
+        self.__regularizer = regularizer
+
+    @property
+    def _annealing_factor(self):
+        return self.__annealing_factor
+
+    @_annealing_factor.setter
+    def _annealing_factor(self, annealing_factor):
+        assert self._between(annealing_factor, lower=0, upper=1)
+        self.__annealing_factor = float(annealing_factor)
+
+    def _gradient(self, solution, _) -> np.ndarray:
         """Take the sum of all gradients in the replay buffer."""
         # add 1/(path len) to each edge
         grad = np.zeros(self._heuristic_table.shape)
@@ -62,7 +103,10 @@ class ACOSGD(ACO):
             tot_grad += self._gradient(solution, cost)
         tot_grad = tot_grad/self._replay_size
 
-        self._heuristic_table = self._heuristic_table - self._learning_rate * tot_grad
+        if self._regularizer == "l2":
+            self._heuristic_table = self._evap_rate * self._heuristic_table - (1-self._evap_rate) * tot_grad
+        else:
+            self._heuristic_table = self._heuristic_table - (1-self._evap_rate) * tot_grad
         self._minmax()
 
     def _advantage_local(self, current_point, next_point, allow_list):
@@ -83,7 +127,8 @@ class ACOSGD(ACO):
 
     def _advantage(self, **kwargs):
         """Return advantage function defined in `advantage`."""
-        valid_adv = {"local", "path"}
+        if self._adv_func is None:
+            return 1
         match self._adv_func:
             case "local":
                 return self._advantage_local(kwargs.get("current_point"), kwargs.get("next_point"), kwargs.get("allow_list"))
@@ -102,29 +147,42 @@ class ACOSGD(ACO):
         score, solution = super().take_step(steps)
         return score, solution
 
+
+def run_model1(distance_matrix, seed):
+    aco = ACOSGD(distance_matrix,
+                 size_pop      = 2,
+                 seed          = seed)
+    aco.run(max_iter=max_iter)
+    return aco.generation_best_Y, aco.generation_policy_score, aco._name_ + " w/ L2"
+
+def run_model2(distance_matrix, seed):
+    aco = ACOSGD(distance_matrix,
+                 size_pop      = 2,
+                 regularizer   = None,
+                 seed          = seed)
+    aco.run(max_iter=max_iter)
+    return aco.generation_best_Y, aco.generation_policy_score, aco._name_
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from tqdm import tqdm
-    size = 50
+    from pgaco.utils import get_graph, plot, parallel_runs
+    size = 20
     runs = 5
-    iterations = 100
-    distance_matrix = np.random.randint(1, 10, size**2).reshape((size, size))
+    max_iter = 1500
+    distance_matrix = get_graph(size)
 
-    print("Running GPACO with log update")
-    ACA_runs = []
+    print("running ACOSGD w/ regularizer")
+    aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model1, runs, distance_matrix, seed = 42)
+    plot(aco_runs, color="cyan", label=aco_name)
+    plot(aco_policy_runs, color="blue", label=aco_name + " policy")
 
-    for test in tqdm(range(runs)):
-        save_file = f"ACO_run_{test}.txt"
-        aca = PGACO_LOG(distance_matrix,
-                        max_iter = iterations,
-                        save_file = save_file)
-        skaco_cost, skaco_sol = aca.run()
-        ACA_runs.append(skaco_cost)
+    print("running ACOSGD")
+    aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model2, runs, distance_matrix, seed = 42)
+    plot(aco_runs, color="green", label=aco_name)
+    plot(aco_policy_runs, color="lime", label=aco_name + " policy")
 
-    ACA_runs = np.array(ACA_runs)
-    print(f"ACA: {ACA_runs.mean():.2f} +/- {ACA_runs.std():.2f}")
-
-    plt.plot(aca.generation_best_Y)
+    plt.legend()
+    plt.tight_layout()
     plt.show()
 
     pass

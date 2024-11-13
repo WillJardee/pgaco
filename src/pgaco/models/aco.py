@@ -13,24 +13,14 @@ in a graph, which can be applied to various shortest problems.
 """
 
 import warnings
-import inspect
 from typing import Callable, Iterable
 
 import numpy as np
 
-from pgaco.models import ACOBase
-from pgaco.models import post_init_decorator
-
-def path_len(distance_matrix: np.ndarray, path) -> float:
-    length = len(path)
-    cost = 0
-    for i in range(length):
-        cost += distance_matrix[path[i%length]][path[(i+1)%length]]
-    return float(cost)
+from pgaco.models import ACOBase, path_len
 
 class ACO(ACOBase):
     """Simple, default ACO solution to TSP problem."""
-    @post_init_decorator
     def __init__(self,
                  distance_matrix: np.ndarray,
                  func: Callable[[np.ndarray, Iterable], float] = path_len,
@@ -42,6 +32,7 @@ class ACO(ACOBase):
                  minmax: bool = True,
                  replay_size: int = 1,
                  replay_rule: str = "elite",
+                 slim: bool = True,
                  **kwargs,
                  ) -> None:
         """
@@ -70,6 +61,9 @@ class ACO(ACOBase):
                 elite: keep the best `replay_size` ants
                 evict: keep the most recent `replay_size` ants (notice that if `replay_size` < `size_pop` the extra ants will still be evaluated.).
                 none: the ants at a generation will reinforce. This is equivalent to `replay_size` = `size_pop` with `replay_rule` = "evict".
+            slim : bool, True
+                Whether to do all calculation for introspection.
+                Disabling leaves: generation_best_Y, generation_policy_score, generation_best_X empty
         """
         self._name_ = "ACO"
         super().__init__(**kwargs)
@@ -83,8 +77,11 @@ class ACO(ACOBase):
         self._evap_rate = evap_rate
         self._replay_size = replay_size
         self._replay_rule = replay_rule
+        if self._replay_rule == "global_best":
+            self._replay_rule = "elite"
+            self._replay_size = 1
         self._minmax_adaptive = minmax
-        self._iteration         =   0
+        self.slim = slim
 
         self._initialize_workspace()
         self._prob_rule_update()
@@ -93,7 +90,7 @@ class ACO(ACOBase):
     def _initialize_workspace(self) -> None:
         self._min_dist  =   self.distance_matrix[np.where(self.distance_matrix > 0)].min()
         self._max_dist  =   self.distance_matrix.max()
-        self._dim       =   distance_matrix.shape[0]
+        self._dim       =   self.distance_matrix.shape[0]
         self._max_tau = 1/(self._dim * self._min_dist) # max value; helps with runaway behavior
         self._min_tau = self._max_tau/(2 * self._dim) # min value; helps erogtic behavior and NaNs
         # self._min = False if (self._min_tau == -1 and not self._minmax_adaptive) else True
@@ -116,20 +113,81 @@ class ACO(ACOBase):
         # self.x_best_history, self.y_best_history = self.generation_best_X, self.generation_best_Y
         self.best_x, self.best_y = None, None
 
+    """The following is collection of parameter validation rules."""
+    @property
+    def func(self):
+        return self._func
 
-    def _validate_params(self) -> None:
-        super()._validate_params()
-        assert callable(self.func)
-        assert isinstance(self._size_pop, int) and self._between(self._size_pop, lower=1, inclusive=True)
-        assert isinstance(self._alpha, float) and self._between(self._alpha, lower=0, inclusive=True)
-        assert isinstance(self._beta, float) and self._between(self._beta, lower=0, inclusive=True)
-        assert isinstance(self._evap_rate, float) and self._between(self._evap_rate, lower=0, upper=1, inclusive=True)
-        assert isinstance(self._replay_size, int) and self._between(self._size_pop, lower=1, inclusive=True)
-        assert isinstance(self._replay_rule, str) and self._replay_rule in ["elite", "evict", "none"]
-        assert isinstance(self._minmax, bool)
+    @func.setter
+    def func(self, func):
+        assert callable(func)
+        self._func = func
 
+    @property
+    def _size_pop(self):
+        return self.__size_pop
+
+    @_size_pop.setter
+    def _size_pop(self, size_pop):
+        assert self._between(size_pop, lower=0)
+        self.__size_pop = int(size_pop)
+
+    @property
+    def _alpha(self):
+        return self.__alpha
+
+    @_alpha.setter
+    def _alpha(self, alpha):
+        assert self._between(alpha, lower=0, inclusive=True)
+        self.__alpha = float(alpha)
+
+    @property
+    def _beta(self):
+        return self.__beta
+
+    @_beta.setter
+    def _beta(self, beta):
+        assert self._between(beta, lower=0, inclusive=True)
+        self.__beta = float(beta)
+
+    @property
+    def _evap_rate(self):
+        return self.__evap_rate
+
+    @_evap_rate.setter
+    def _evap_rate(self, evap_rate):
+        assert self._between(evap_rate, lower=0, upper=1, inclusive=True)
+        self.__evap_rate = float(evap_rate)
+
+    @property
+    def _replay_size(self):
+        return self.__replay_size
+
+    @_replay_size.setter
+    def _replay_size(self, replay_size):
+        assert self._between(replay_size, lower=1, inclusive=True)
+        self.__replay_size = int(replay_size)
+
+    @property
+    def _replay_rule(self):
+        return self.__replay_rule
+
+    @_replay_rule.setter
+    def _replay_rule(self, replay_rule):
+        assert replay_rule in ["global_best", "elite", "evict", "none"]
+        self.__replay_rule = replay_rule
+
+    @property
+    def _minmax_adaptive(self):
+        return self.__minmax_adaptive
+
+    @_minmax_adaptive.setter
+    def _minmax_adaptive(self, minmax_adaptive):
+        assert isinstance(minmax_adaptive, bool)
+        self.__minmax_adaptive = minmax_adaptive
 
     def _minmax(self) -> None:
+        """Apply the adaptive MinMax rule."""
         if self._max:
             if self._minmax_adaptive:
                 self._max_tau = 1/(self._evap_rate * self.current_best_Y)
@@ -190,6 +248,7 @@ class ACO(ACOBase):
         return probs[node]
 
     def _elite_replay_rule(self, new_fitness, new_solutions) -> None:
+        """Keep the most recent `self._replay_size` elements in the `self._replay_buffer` and `self._replay_buffer_fit`."""
         full_buffer = np.concatenate([new_solutions, self._replay_buffer])
         full_fitness = np.concatenate([new_fitness, self._replay_buffer_fit])
         keep_indices = np.argpartition(full_fitness, kth=self._replay_size)[:self._replay_size]
@@ -197,6 +256,7 @@ class ACO(ACOBase):
         self._replay_buffer_fit = full_fitness[keep_indices]
 
     def _evict_replay_rule(self, new_fitness, new_solutions) -> None:
+        """Keep the best `self._replay_size` elements in the `self._replay_buffer` and `self._replay_buffer_fit`."""
         full_buffer = np.concatenate([new_solutions, self._replay_buffer])
         full_fitness = np.concatenate([new_fitness, self._replay_buffer_fit])
         self._replay_buffer = full_buffer[:self._replay_size]
@@ -260,9 +320,10 @@ class ACO(ACOBase):
             y, x = self._get_best(n=1)
             if y <= self.current_best_Y:
                 self.current_best_Y, self.current_best_X = float(y), x
-            self.generation_best_Y.append(y)
-            y_policy, _ = self.get_solution()
-            self.generation_policy_score.append(y_policy)
+            if not self.slim:
+                self.generation_best_Y.append(y)
+                y_policy, _ = self.get_solution()
+                self.generation_policy_score.append(y_policy)
 
             # Save check
             if self._iteration % self._checkpoint_res == 0:
@@ -289,10 +350,9 @@ def run_model1(distance_matrix, seed):
     aco = ACO(distance_matrix,
                   beta          = 0,
                   size_pop      = 2,
-                  max_iter      = max_iter,
                   replay_rule   = "global_best",
                   seed          = seed)
-    aco.run()
+    aco.run(max_iter=max_iter)
     return aco.generation_best_Y, aco.generation_policy_score, "MINMAX " + aco._name_
 
 def run_model2(distance_matrix, seed):
@@ -301,10 +361,9 @@ def run_model2(distance_matrix, seed):
                   alpha         = 1,
                   beta          = 2,
                   size_pop      = 2,
-                  max_iter      = max_iter,
                   replay_rule   = "global_best",
                   seed          = seed)
-    aco.run()
+    aco.run(max_iter=max_iter)
     return aco.generation_best_Y, aco.generation_policy_score, "MINMAX " + aco._name_
 
 

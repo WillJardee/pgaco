@@ -1,5 +1,5 @@
 from pgaco.tuning.tuning_base import *
-from pgaco.model.ANTQ import ANTQ
+from pgaco.models import ANTQ
 
 model_name = "ANTQ"
 
@@ -7,20 +7,19 @@ def model(trial) -> float:
     size_pop    = trial.suggest_int("size_pop", size_pop_down, size_pop_up, log=True)
     alpha       = trial.suggest_int("alpha", alpha_down, alpha_up)
     beta        = trial.suggest_int("beta", beta_down, beta_up)
-    learning_rate   = trial.suggest_float("learning_rate", 0.001, 0.99)
+    evap_rate   = trial.suggest_float("evap_rate", evap_rate_down, evap_rate_up)
     discount_factor   = trial.suggest_float("discount_factor", 0.001, 0.99)
 
     replay_size = trial.suggest_int("replay_size", replay_size_down, replay_size_up)
 
     aco = ANTQ(graph,
-                  seed          =   seed,
-                  max_iter      =   max_iter,
-                  size_pop      =   size_pop,
-                  alpha         =   alpha,
-                  beta          =   beta,
-                  learning_rate     =   learning_rate,
-                  discount_factor = discount_factor,
-                  replay_size   =   replay_size)
+               seed          =   seed,
+               size_pop      =   size_pop,
+               alpha         =   alpha,
+               beta          =   beta,
+               evap_rate     =   evap_rate,
+               discount_factor = discount_factor,
+               replay_size   =   replay_size)
 
     for i in range(max_iter // pruning_period):
         intermediate_score, _ = aco.take_step(steps=pruning_period)

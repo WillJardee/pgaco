@@ -1,5 +1,5 @@
 from pgaco.tuning.tuning_base import *
-from pgaco.model.ADACO import ADACO
+from pgaco.models import ADACO
 
 model_name = "ADACO"
 
@@ -14,7 +14,6 @@ def model(trial) -> float:
 
     aco = ADACO(graph,
                 seed          =  seed,
-                max_iter      =  max_iter,
                 size_pop      =  size_pop,
                 alpha         =  alpha,
                 beta          =  beta,

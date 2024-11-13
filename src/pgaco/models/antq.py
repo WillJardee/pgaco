@@ -8,8 +8,8 @@ Classes:
 
 
 import numpy as np
-
-from . import ACO
+from typing import Callable, Iterable
+from pgaco.models import ACO, path_len
 
 
 class ANTQ(ACO):
@@ -23,17 +23,36 @@ class ANTQ(ACO):
 
     def __init__(self,
                  distance_matrix: np.ndarray,
+                 func: Callable[[np.ndarray, Iterable], float] = path_len,
+                 *,
+                 discount_factor: float = 0.1,
+                 off_policy: bool = True,
                  **kwargs) -> None:
         """Class specific params."""
-        self.allowed_params = {"learning_rate", "discount_factor",
-                               "off_policy"}
-        super().__init__(distance_matrix, **self._passkwargs(**kwargs))
         self._name_ = "ANT-Q"
-        self._learning_rate     = kwargs.get("learning_rate", 0.1)
-        self._discount_factor   = kwargs.get("discount_factor", 0.1)
-        self._off_policy        = kwargs.get("off_policy", True)
-        self._running_grad      = np.zeros(self._heuristic_table.shape)
+        super().__init__(distance_matrix, func, **kwargs)
+        self._discount_factor = discount_factor
+        self._off_policy = off_policy
+        self._name_ = "ANT-Q" if self._off_policy else "ANT-SARSA"
+        self._running_grad = np.zeros(self._heuristic_table.shape)
 
+    @property
+    def _discount_factor(self):
+        return self.__discount_factor
+
+    @_discount_factor.setter
+    def _discount_factor(self, discount_factor):
+        assert self._between(discount_factor, lower=0, upper=1, inclusive=True)
+        self.__discount_factor = float(discount_factor)
+
+    @property
+    def _off_policy(self):
+        return self.__off_policy
+
+    @_off_policy.setter
+    def _off_policy(self, off_policy):
+        assert isinstance(off_policy, bool)
+        self.__off_policy = int(off_policy)
 
     def _gradient(self, solution, cost) -> np.ndarray:
         """Calculate the gradient for a single example."""
@@ -60,34 +79,44 @@ class ANTQ(ACO):
 
         self._running_grad = self._running_grad/(self._size_pop)
 
-        self._heuristic_table = (1-self._learning_rate) * self._heuristic_table + self._learning_rate * (tot_grad + self._discount_factor * self._running_grad)
+        self._heuristic_table = (1-self._evap_rate) * self._heuristic_table + self._evap_rate * (tot_grad + self._discount_factor * self._running_grad)
         # Notice that there is the missing max term here, that is moved to the gradient
         self._minmax()
 
+
+def run_model1(distance_matrix, seed):
+    aco = ANTQ(distance_matrix,
+               seed          = seed)
+    aco.run(max_iter=max_iter)
+    return aco.generation_best_Y, aco.generation_policy_score, aco._name_
+
+def run_model2(distance_matrix, seed):
+    aco = ANTQ(distance_matrix,
+               off_policy=False,
+               seed          = seed)
+    aco.run(max_iter=max_iter)
+    return aco.generation_best_Y, aco.generation_policy_score, aco._name_
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    from tqdm import tqdm
-    size = 100
+    from pgaco.utils import get_graph, plot, parallel_runs
+    size = 20
     runs = 5
-    iterations = 100
-    distance_matrix = np.random.randint(1, 100, size**2).reshape((size, size))
+    max_iter = 1500
+    distance_matrix = get_graph(size)
 
-    print("Running ACO")
-    ACA_runs = []
-    aca = ANTQ(distance_matrix,
-                  max_iter = iterations)
+    print("running ANT-Q")
+    aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model1, runs, distance_matrix, seed = 42)
+    plot(aco_runs, color="cyan", label=aco_name)
+    plot(aco_policy_runs, color="blue", label=aco_name + " policy")
 
-    for test in tqdm(range(runs)):
-        save_file = f"ACO_run_{test}.txt"
-        aca = ANTQ(distance_matrix,
-                   max_iter = iterations)
-        skaco_cost, skaco_sol = aca.run()
-        ACA_runs.append(skaco_cost)
+    print("running ANT-SARSA")
+    aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model2, runs, distance_matrix, seed = 42)
+    plot(aco_runs, color="green", label=aco_name)
+    plot(aco_policy_runs, color="lime", label=aco_name + " policy")
 
-    ACA_runs = np.array(ACA_runs)
-    print(f"ACA: {ACA_runs.mean():.2f} +/- {ACA_runs.std():.2f}")
-
-    plt.plot(aca.generation_best_Y)
+    plt.legend()
+    plt.tight_layout()
     plt.show()
 
     pass

@@ -3,11 +3,32 @@ import ast
 import pickle
 import warnings
 import numpy as np
-from pgaco.utils import post_init_decorator
+
+def path_len(distance_matrix: np.ndarray, path) -> float:
+    """Returns the length of a path in the given space
+
+    Returns the summation of each "edge" <i, j> in path, as given by distance_matrix[i, j].
+
+    Parameters
+    ----------
+    distance_matrix : np.ndarray
+        Adjacency matrix.
+    path : list like
+        Sequential visit of the path.
+
+    Returns
+    -------
+    return float
+        Sum of all the weights
+    """
+    length = len(path)
+    cost = 0
+    for i in range(length):
+        cost += distance_matrix[path[i%length]][path[(i+1)%length]]
+    return float(cost)
 
 
 class ACOBase():
-    @post_init_decorator
     def __init__(self,
                  *,
                  seed: int | None = None,
@@ -29,29 +50,55 @@ class ACOBase():
 
         self._heuristic_table = np.array([])
 
-    def _post_init(self):
-        self._validate_params()
+    @property
+    def _savefile(self):
+        return self.__savefile
+
+    @_savefile.setter
+    def _savefile(self, path):
+        assert self._nonempty(path)
+        self.__savefile = path
+
+    @property
+    def _checkpointfile(self):
+        return self.__checkpointfile
+
+    @_checkpointfile.setter
+    def _checkpointfile(self, path):
+        assert self._nonempty(path,)
+        self.__checkpointfile = path
+
+    @property
+    def _checkpoint_res(self):
+        return self.__checkpoint_res
+
+    @_checkpoint_res.setter
+    def _checkpoint_res(self, checkpoint_res):
+        assert self._between(checkpoint_res, lower=0)
+        self.__checkpoint_res = int(checkpoint_res)
+
+    def _nonempty(self, string, none_valid: bool = True) -> bool:
+        assert isinstance(none_valid, bool)
+        if not string:
+            if none_valid and string is None:
+                return True
+            return False
+        return True
 
     def _between(self, value, *, lower: int | None = None, upper: int | None = None, inclusive: bool = False) -> bool:
         assert isinstance(inclusive, bool)
         if lower is not None:
-            if inclusive and value <= lower:
+            if inclusive and value < lower:
                 return False
-            elif (not inclusive) and value < lower:
+            elif (not inclusive) and value <= lower:
                 return False
         if upper is not None:
-            if inclusive and value >= upper:
+            if inclusive and value > upper:
                 return False
-            elif (not inclusive) and value > upper:
+            elif (not inclusive) and value >= upper:
                 return False
         return True
 
-
-    def _validate_params(self):
-        assert isinstance(self._savefile, (str, type(None)))
-        assert isinstance(self._checkpointfile, (str, type(None)))
-        assert isinstance(self._checkpoint_res, int)
-        assert self._between(self._checkpoint_res, lower = 0)
 
     def _save_params(self) -> None:
         pass
