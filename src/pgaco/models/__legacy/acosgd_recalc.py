@@ -88,57 +88,56 @@ class ACOSGD(ACO):
         """Find a path for a single path."""
         solution = [self._rng.integers(self._dim)]
         # grad = dok_matrix((self._dim, self._dim), dtype=np.float64)
-        grad = {}
-        sub_term = 0
+        grad = 0
         for k in range(self._dim - 1):
             allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
             prob = np.array(self._prob_matrix[solution[k], allow_list]).flatten()
             prob = prob / prob.sum()
             next_point = self._rng.choice(allow_list, p=prob) # roulette selection
             solution.append(next_point)
-
-            advantage = self._advantage(current_point=solution[-2], next_point=solution[-1], allow_list=allow_list)
-            grad[(k, k+1)] = self._alpha * advantage / self._heuristic_table[k, k+1]
-            if self._exact_grad:
-                for point, prob_val in zip(allow_list, prob):
-                    # TODO: Unsure if the prob_val should be there
-                    # grad[k, k+1] -= self._alpha * advantage /self._heuristic_table[k, point] * prob_val
-                    grad[(k, k+1)] = - self._alpha * advantage /self._heuristic_table[k, point] * prob_val
-            else:
-                sub_term += self._alpha * advantage /self._heuristic_table[k].max()
-        # if self._exact_grad:
-        #     grad = np.matrix(grad.todense())
-        grad["sub_term"] = sub_term
+        #
+        #     advantage = self._advantage(current_point=solution[-2], next_point=solution[-1], allow_list=allow_list)
+        #     grad[(k, k+1)] = self._alpha * advantage / self._heuristic_table[k, k+1]
+        #     if self._exact_grad:
+        #         for point, prob_val in zip(allow_list, prob):
+        #             # TODO: Unsure if the prob_val should be there
+        #             # grad[k, k+1] -= self._alpha * advantage /self._heuristic_table[k, point] * prob_val
+        #             grad[(k, k+1)] = - self._alpha * advantage /self._heuristic_table[k, point] * prob_val
+        #     else:
+        #         sub_term += self._alpha * advantage /self._heuristic_table[k].max()
+        # # if self._exact_grad:
+        # #     grad = np.matrix(grad.todense())
+        # grad["sub_term"] = sub_term
         cost = self.func(self.distance_matrix, solution)
         return np.array(solution, dtype=int), grad, cost
 
-   # def _gradient(self, solution) -> np.ndarray:
-    #     """Take the sum of all gradients in the replay buffer."""
-    #     # add 1/(path len) to each edge
-    #     grad = np.zeros(self._heuristic_table.shape)
-    #     for k in range(len(solution) - 1):
-    #         n1, n2 = solution[k], solution[k+1]
-    #         allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
-    #         prob = self._prob_matrix[solution[k], allow_list]
-    #         prob = prob / prob.sum()
-    #         advantage = self._advantage(current_point=solution[-2], next_point=solution[-1], allow_list=allow_list)
-    #         grad[n1, n2] += self._alpha * advantage / self._heuristic_table[n1, n2]
-    #         for point, prob_val in zip(allow_list, prob):
-    #             grad[n1, point] -= self._alpha * advantage /self._heuristic_table[n1, point] * prob_val
-    #     return grad
+    def _gradient(self, solution) -> np.ndarray:
+        """Take the sum of all gradients in the replay buffer."""
+        # add 1/(path len) to each edge
+        grad = np.zeros(self._heuristic_table.shape)
+        for k in range(len(solution) - 1):
+            n1, n2 = solution[k], solution[k+1]
+            allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
+            prob = np.array(self._prob_matrix[solution[k], allow_list]).flatten()
+            prob = prob / prob.sum()
+            advantage = self._advantage(current_point=solution[-2], next_point=solution[-1], allow_list=allow_list)
+            grad[n1, n2] += self._alpha * advantage / self._heuristic_table[n1, n2]
+            for point, prob_val in zip(allow_list, prob):
+                grad[n1, point] -= self._alpha * advantage /self._heuristic_table[n1, point] * prob_val
+        return grad
 
     def _gradient_update(self) -> None:
         """Take an gradient step."""
         tot_grad = np.zeros(self._heuristic_table.shape)
-        # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-        #     tot_grad += self._gradient(solution, cost)
-        # tot_grad = tot_grad/self._replay_size
-        for grad in self._replay_buffer_grads:
-            for coord, val in zip(grad.keys(), grad.values()):
-                if coord == "sub_term":
-                    continue
-                tot_grad[coord[0], coord[1]] = val
-            tot_grad -= grad["sub_term"]
+        for solution, _ in zip(self._replay_buffer, self._replay_buffer_fit):
+            tot_grad += self._gradient(solution)
+        tot_grad = tot_grad/self._replay_size
+        # for grad in self._replay_buffer_grads:
+        #     for coord, val in zip(grad.keys(), grad.values()):
+        #         if coord == "sub_term":
+        #             continue
+        #         tot_grad[coord[0], coord[1]] = val
+        #     tot_grad -= grad["sub_term"]
         tot_grad = tot_grad/self._replay_size
 
 
@@ -218,12 +217,12 @@ if __name__ == "__main__":
     print("running ACOSGD w/ regularizer")
     aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model1, runs, distance_matrix, seed = 42)
     plot(aco_runs, color="cyan", label=aco_name)
-    plot(aco_policy_runs, color="blue", label=aco_name + " policy")
+    # plot(aco_policy_runs, color="blue", label=aco_name + " policy")
 
     print("running ACOSGD")
     aco_runs, aco_policy_runs, aco_name = parallel_runs(run_model2, runs, distance_matrix, seed = 42)
     plot(aco_runs, color="green", label=aco_name)
-    plot(aco_policy_runs, color="lime", label=aco_name + " policy")
+    # plot(aco_policy_runs, color="lime", label=aco_name + " policy")
 
     plt.legend()
     plt.tight_layout()

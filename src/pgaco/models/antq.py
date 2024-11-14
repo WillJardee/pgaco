@@ -7,8 +7,9 @@ Classes:
 """
 
 
-import numpy as np
 from typing import Callable, Iterable
+import numpy as np
+from scipy.sparse import dok_matrix
 from pgaco.models import ACO, path_len
 
 
@@ -54,11 +55,12 @@ class ANTQ(ACO):
         assert isinstance(off_policy, bool)
         self.__off_policy = int(off_policy)
 
-    def _gradient(self, solution, cost) -> np.ndarray:
+    def _gradient(self, solution, cost):
         """Calculate the gradient for a single example."""
         sol_len = len(solution)
         # add 1/(path len) to each edge
-        grad = np.zeros(self._heuristic_table.shape)
+        # grad = np.zeros(self._heuristic_table.shape)
+        grad = dok_matrix(self._heuristic_table.shape)
         for k in range(sol_len):
             n1, n2 = solution[(k)%sol_len], solution[(k+1)%sol_len]
             grad[n1, n2] += 1 / cost
@@ -72,10 +74,13 @@ class ANTQ(ACO):
 
     def _gradient_update(self) -> None:
         """Take an gradient step."""
-        tot_grad = np.zeros(self._heuristic_table.shape)
-        for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-            tot_grad += self._gradient(solution, cost)
+        # tot_grad = np.zeros(self._heuristic_table.shape)
+        # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
+        #     tot_grad += self._gradient(solution, cost)
+        # tot_grad = tot_grad/self._replay_size
+        tot_grad = np.sum(self._replay_buffer_grads)
         tot_grad = tot_grad/self._replay_size
+
 
         self._running_grad = self._running_grad/(self._size_pop)
 
@@ -86,6 +91,7 @@ class ANTQ(ACO):
 
 def run_model1(distance_matrix, seed):
     aco = ANTQ(distance_matrix,
+                slim = False,
                seed          = seed)
     aco.run(max_iter=max_iter)
     return aco.generation_best_Y, aco.generation_policy_score, aco._name_
@@ -93,6 +99,7 @@ def run_model1(distance_matrix, seed):
 def run_model2(distance_matrix, seed):
     aco = ANTQ(distance_matrix,
                off_policy=False,
+                slim = False,
                seed          = seed)
     aco.run(max_iter=max_iter)
     return aco.generation_best_Y, aco.generation_policy_score, aco._name_
@@ -102,7 +109,7 @@ if __name__ == "__main__":
     from pgaco.utils import get_graph, plot, parallel_runs
     size = 20
     runs = 5
-    max_iter = 1500
+    max_iter = 150
     distance_matrix = get_graph(size)
 
     print("running ANT-Q")

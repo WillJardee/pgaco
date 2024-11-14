@@ -213,10 +213,10 @@ class ACO(ACOBase):
 
     def _gradient_update(self) -> None:
         """Take an gradient step."""
-        # tot_grad = np.zeros(self._heuristic_table.shape)
-        # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-        #     tot_grad += self._gradient(solution, cost)
-        tot_grad = np.sum(self._replay_buffer_grads)
+        tot_grad = np.zeros(self._heuristic_table.shape)
+        for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
+            tot_grad += self._gradient(solution, cost)
+        # tot_grad = np.sum(self._replay_buffer_grads)
         tot_grad = tot_grad/self._replay_size
 
         self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * tot_grad
@@ -237,7 +237,8 @@ class ACO(ACOBase):
             next_point = self._rng.choice(allow_list, p=prob) # roulette selection
             solution.append(next_point)
         cost = self.func(self.distance_matrix, solution)
-        grad = self._gradient(solution, cost)
+        # grad = self._gradient(solution, cost)
+        grad = None
         return np.array(solution, dtype=int), grad, cost
 
     def _prob_rule_update(self) -> None:

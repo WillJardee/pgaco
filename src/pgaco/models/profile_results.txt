@@ -1,0 +1,122 @@
+size: 20
+Wed Nov 13 13:43:26 2024    output.prof
+
+         351829 function calls (351805 primitive calls) in 0.169 seconds
+
+   Ordered by: cumulative time
+   List reduced from 220 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.169    0.169 {built-in method builtins.exec}
+        1    0.000    0.000    0.169    0.169 <string>:1(<module>)
+        1    0.000    0.000    0.169    0.169 /home/willj/dev/pgaco/src/pgaco/models/profiling.py:21(run_model1)
+        1    0.000    0.000    0.167    0.167 /home/willj/dev/pgaco/src/pgaco/models/aco.py:355(run)
+        1    0.000    0.000    0.167    0.167 /home/willj/dev/pgaco/src/pgaco/models/aco.py:316(take_step)
+       75    0.006    0.000    0.088    0.001 /home/willj/dev/pgaco/src/pgaco/models/aco.py:230(_single_solution)
+       15    0.000    0.000    0.078    0.005 /home/willj/dev/pgaco/src/pgaco/models/aco.py:214(_gradient_update)
+     6640    0.004    0.000    0.078    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:144(__getitem__)
+      300    0.002    0.000    0.075    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:279(__add__)
+     1502    0.002    0.000    0.075    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+     8140    0.017    0.000    0.073    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:153(_validate_indices)
+       15    0.000    0.000    0.073    0.005 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/fromnumeric.py:2177(sum)
+       15    0.000    0.000    0.073    0.005 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/fromnumeric.py:71(_wrapreduction)
+     6640    0.005    0.000    0.071    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:51(__getitem__)
+      315    0.002    0.000    0.064    0.000 {method 'update' of 'dict' objects}
+     5425    0.002    0.000    0.062    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:303(<genexpr>)
+       75    0.001    0.000    0.038    0.001 /home/willj/dev/pgaco/src/pgaco/models/aco.py:203(_gradient)
+    17115    0.013    0.000    0.027    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_sputils.py:218(isintlike)
+     8140    0.012    0.000    0.026    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:296(_unpack_index)
+     1425    0.019    0.000    0.023    0.000 {method 'choice' of 'numpy.random._generator.Generator' objects}
+
+
+Wed Nov 13 13:43:26 2024    output.prof
+
+         496030 function calls (496022 primitive calls) in 0.176 seconds
+
+   Ordered by: cumulative time
+   List reduced from 170 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.176    0.176 {built-in method builtins.exec}
+        1    0.000    0.000    0.176    0.176 <string>:1(<module>)
+        1    0.000    0.000    0.176    0.176 /home/willj/dev/pgaco/src/pgaco/models/profiling.py:29(run_model2)
+        1    0.000    0.000    0.175    0.175 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:356(run)
+        1    0.000    0.000    0.175    0.175 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:317(take_step)
+       15    0.001    0.000    0.141    0.009 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:214(_gradient_update)
+      300    0.004    0.000    0.110    0.000 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:203(_gradient)
+    12000    0.019    0.000    0.075    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:153(_validate_indices)
+     6000    0.003    0.000    0.051    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:236(__setitem__)
+     6000    0.003    0.000    0.051    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:144(__getitem__)
+     6000    0.006    0.000    0.046    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:101(__setitem__)
+     6000    0.004    0.000    0.046    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:51(__getitem__)
+       75    0.004    0.000    0.034    0.000 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:230(_single_solution)
+      300    0.000    0.000    0.029    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:310(__radd__)
+      300    0.001    0.000    0.029    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:279(__add__)
+    12000    0.014    0.000    0.029    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:296(_unpack_index)
+      300    0.000    0.000    0.027    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_base.py:903(todense)
+      300    0.000    0.000    0.026    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_base.py:935(toarray)
+    24940    0.017    0.000    0.023    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_sputils.py:218(isintlike)
+      300    0.002    0.000    0.022    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:455(tocoo)
+
+
+size: 200
+Wed Nov 13 13:43:28 2024    output.prof
+
+         3282124 function calls in 1.296 seconds
+
+   Ordered by: cumulative time
+   List reduced from 188 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.296    1.296 {built-in method builtins.exec}
+        1    0.000    0.000    1.296    1.296 <string>:1(<module>)
+        1    0.000    0.000    1.296    1.296 /home/willj/dev/pgaco/src/pgaco/models/profiling.py:21(run_model1)
+        1    0.000    0.000    1.293    1.293 /home/willj/dev/pgaco/src/pgaco/models/aco.py:355(run)
+        1    0.001    0.001    1.293    1.293 /home/willj/dev/pgaco/src/pgaco/models/aco.py:316(take_step)
+       75    0.062    0.001    0.770    0.010 /home/willj/dev/pgaco/src/pgaco/models/aco.py:230(_single_solution)
+    66200    0.032    0.000    0.580    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:144(__getitem__)
+    81200    0.124    0.000    0.539    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:153(_validate_indices)
+    66200    0.042    0.000    0.531    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:51(__getitem__)
+       15    0.001    0.000    0.510    0.034 /home/willj/dev/pgaco/src/pgaco/models/aco.py:214(_gradient_update)
+    15002    0.014    0.000    0.502    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+      300    0.002    0.000    0.494    0.002 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:279(__add__)
+       15    0.000    0.000    0.490    0.033 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/fromnumeric.py:2177(sum)
+       15    0.000    0.000    0.490    0.033 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/fromnumeric.py:71(_wrapreduction)
+      315    0.014    0.000    0.488    0.002 {method 'update' of 'dict' objects}
+    51485    0.015    0.000    0.470    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:303(<genexpr>)
+       75    0.008    0.000    0.260    0.003 /home/willj/dev/pgaco/src/pgaco/models/aco.py:203(_gradient)
+    14925    0.168    0.000    0.199    0.000 {method 'choice' of 'numpy.random._generator.Generator' objects}
+    81200    0.092    0.000    0.195    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:296(_unpack_index)
+   163235    0.091    0.000    0.180    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_sputils.py:218(isintlike)
+
+
+Wed Nov 13 13:43:29 2024    output.prof
+
+         4357020 function calls in 1.598 seconds
+
+   Ordered by: cumulative time
+   List reduced from 168 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    1.598    1.598 {built-in method builtins.exec}
+        1    0.000    0.000    1.598    1.598 <string>:1(<module>)
+        1    0.000    0.000    1.598    1.598 /home/willj/dev/pgaco/src/pgaco/models/profiling.py:29(run_model2)
+        1    0.000    0.000    1.595    1.595 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:356(run)
+        1    0.000    0.000    1.595    1.595 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:317(take_step)
+       15    0.003    0.000    1.086    0.072 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:214(_gradient_update)
+      300    0.036    0.000    1.034    0.003 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:203(_gradient)
+   120000    0.179    0.000    0.735    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:153(_validate_indices)
+    60000    0.032    0.000    0.501    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:236(__setitem__)
+       75    0.061    0.001    0.497    0.007 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:230(_single_solution)
+    60000    0.030    0.000    0.492    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_dok.py:144(__getitem__)
+    60000    0.060    0.000    0.454    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:101(__setitem__)
+    60000    0.038    0.000    0.447    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:51(__getitem__)
+   120000    0.135    0.000    0.285    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_index.py:296(_unpack_index)
+   240940    0.163    0.000    0.212    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/scipy/sparse/_sputils.py:218(isintlike)
+    14925    0.163    0.000    0.193    0.000 {method 'choice' of 'numpy.random._generator.Generator' objects}
+    14925    0.082    0.000    0.112    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:190(__getitem__)
+    14925    0.091    0.000    0.091    0.000 /home/willj/dev/pgaco/src/pgaco/models/aco_recalc.py:226(_get_candiates)
+   241200    0.044    0.000    0.075    0.000 <frozen importlib._bootstrap>:645(parent)
+   920237    0.068    0.000    0.073    0.000 {built-in method builtins.isinstance}
+
+
