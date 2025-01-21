@@ -24,6 +24,6 @@ def parallel_runs(alg, runs, distance_matrix, seed):
     aco_runs = [result[0] for result in results]
     aco_policy_runs = [result[1] for result in results]
     aco_name = results[0][2]  # Assuming all runs have the same name
-    return np.array(aco_runs), np.array(aco_policy_runs), aco_name
+    return np.array(aco_runs), np.array(aco_policy_runs), str(aco_name)
 
 

@@ -30,12 +30,12 @@ class ANTQ(ACO):
                  off_policy: bool = True,
                  **kwargs) -> None:
         """Class specific params."""
-        self._name_ = "ANT-Q"
         super().__init__(distance_matrix, func, **kwargs)
         self._discount_factor = discount_factor
         self._off_policy = off_policy
         self._name_ = "ANT-Q" if self._off_policy else "ANT-SARSA"
         self._running_grad = np.zeros(self._heuristic_table.shape)
+        self._name_ = "ANT-Q"
 
     @property
     def _discount_factor(self):

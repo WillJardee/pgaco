@@ -45,30 +45,35 @@ def run_model2(distance_matrix, seed):
 if __name__ == "__main__":
 
     with open('profile_results.txt', 'w') as var:
-        size = 20
+        graph = "att48.tsp"
         max_iter = 15
-        distance_matrix = get_graph(size)
+        distance_matrix = get_graph(graph)
 
-        var.write(f"size: {size}\n")
+        print(f"Running on: {graph}")
+        var.write(f"Running on: {graph}\n")
 
+        print("Running sparse")
         cProfile.run('run_model1(distance_matrix, 42)', 'output.prof')
         p = pstats.Stats('output.prof', stream=var)
         p.sort_stats(SortKey.CUMULATIVE).print_stats(20)
 
+        print("Running reconstruction")
         cProfile.run('run_model2(distance_matrix, 42)', 'output.prof')
         p = pstats.Stats('output.prof', stream=var)
         p.sort_stats(SortKey.CUMULATIVE).print_stats(20)
 
-        size = 200
+        graph = "ali535.tsp"
         max_iter = 15
-        distance_matrix = get_graph(size)
+        distance_matrix = get_graph(graph)
 
-        var.write(f"size: {size}\n")
+        var.write(f"Running on: {graph}\n")
 
+        print("Running sparse")
         cProfile.run('run_model1(distance_matrix, 42)', 'output.prof')
         p = pstats.Stats('output.prof', stream=var)
         p.sort_stats(SortKey.CUMULATIVE).print_stats(20)
 
+        print("Running reconstruction")
         cProfile.run('run_model2(distance_matrix, 42)', 'output.prof')
         p = pstats.Stats('output.prof', stream=var)
         p.sort_stats(SortKey.CUMULATIVE).print_stats(20)

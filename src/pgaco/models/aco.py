@@ -34,6 +34,7 @@ class ACO(ACOBase):
                  replay_size: int = 20,
                  replay_rule: str = "elite",
                  slim: bool = True,
+                 softmax: bool = False,
                  **kwargs,
                  ) -> None:
         """
@@ -66,7 +67,6 @@ class ACO(ACOBase):
                 Whether to do all calculation for introspection.
                 Disabling leaves: generation_best_Y, generation_policy_score, generation_best_X empty
         """
-        self._name_ = "ACO"
         super().__init__(**kwargs)
 
         self.distance_matrix = distance_matrix.astype(np.float64) # cost matrix
@@ -83,9 +83,11 @@ class ACO(ACOBase):
             self._replay_size = 1
         self._minmax_adaptive = minmax
         self.slim = slim
+        self._softmax = softmax
 
         self._initialize_workspace()
         self._prob_rule_update()
+        self._name_ = "ACO"
 
 
     def _initialize_workspace(self) -> None:
@@ -103,6 +105,8 @@ class ACO(ACOBase):
         # building workspace
         self.distance_matrix += 1e-10 * np.eye(self._dim) # Helps with NaN and stability of some methods
 
+        if self._softmax:
+            self._prob_rule_update = self._prob_rule_update_softmax
         self._prob_bias = np.matrix(1 / (self.distance_matrix)) # bias value (1/len)
         self._prob_bias[np.where(self._prob_bias == np.inf)] = 0
         self._heuristic_table = self._prob_bias.copy()
@@ -245,6 +249,11 @@ class ACO(ACOBase):
         self._prob_matrix = np.multiply(np.power(self._heuristic_table, self._alpha),
                                         np.power(self._prob_bias, self._beta))
 
+    def _prob_rule_update_softmax(self) -> None:
+        """Update the probability matrix."""
+        self._prob_matrix = np.exp(np.multiply(np.power(self._heuristic_table, self._alpha),
+                                               np.power(self._prob_bias, self._beta)))
+
     def _prob_rule_node(self, node: int, taboo_list: set[int] | list[int]) -> float:
         """Return the probability of an action given a state and history."""
         probs = np.zeros(self._dim)
@@ -365,32 +374,34 @@ class ACO(ACOBase):
 
 def run_model1(distance_matrix, seed):
     aco = ACO(distance_matrix,
-              beta          = 0,
+              # beta          = 0,
               size_pop      = 2,
               replay_rule   = "global_best",
               slim = False,
-              seed          = seed)
+              seed          = seed,
+              )
     aco.run(max_iter=max_iter)
     return aco.generation_best_Y, aco.generation_policy_score, "MINMAX " + aco._name_
 
 def run_model2(distance_matrix, seed):
     aco = ACO(distance_matrix,
-              evap_rate     = 0.1,
-              alpha         = 1,
-              beta          = 2,
+              # evap_rate     = 0.1,
+              # alpha         = 1,
+              # beta          = 2,
               size_pop      = 2,
               replay_rule   = "global_best",
               slim = False,
-              seed          = seed)
+              seed          = seed,
+              softmax       = True)
     aco.run(max_iter=max_iter)
-    return aco.generation_best_Y, aco.generation_policy_score, "MINMAX " + aco._name_
+    return aco.generation_best_Y, aco.generation_policy_score, "Softmax MINMAX " + aco._name_
 
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from pgaco.utils import get_graph, plot, parallel_runs
-    size = 20
+    size = 200
     runs = 5
     max_iter = 150
     distance_matrix = get_graph(size)

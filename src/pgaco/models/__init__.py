@@ -6,18 +6,21 @@ with Ant Colony Optimization for solving complex optimization problems.
 
 Classes:
 --------
-ACO : Traditional ACO algorithm
-ADACO : Adaptive Gradient ACO algorithm
-PGACO_LOG : Policy Gradient ACO with logarithmic gradient.
-PGACO_RATIO : Policy Gradient ACO with policy ratio.
+aco : Traditional ACO algorithm
+acosgd : ACO equipped with a Stochastic Gradient Descent update.
+adaco : ACOSGD with an ADADELTA adaptive learning-rate.
+acopg : Policy Gradient ACO with policy ratio.
+antq : ACO with Q-learning update
 
 Examples
 --------
->>> from model.PGACO_LOG import PGACO_LOG
+>>> from model import acosgd
 >>> from utils.tsplib_reader import TSPGraph
 >>> problem = TSPGraph("att48.tsp")
->>> pgaco = PGACO_LOG(problem, learning_rate=10_000)
->>> best_score, best_solution = pgaco.run(max_iter=200)
+>>> acosgd = acosgd(problem,
+                   pop_size=2,
+                   annealing_factor=0.02)
+>>> best_score, best_solution = acosgd.run(max_iter=200)
 
 Notes
 -----

@@ -24,11 +24,11 @@ class ADACO(ACOSGD):
                  *,
                  decay_rate: float = 0.95,
                  **kwargs) -> None:
-        self._name_ = "ADACO"
         super().__init__(distance_matrix, **kwargs)
         self._decay_rate = decay_rate
         self._decay_grad = np.zeros([self._dim, self._dim])
         self._delta_decay_grad = np.zeros([self._dim, self._dim])
+        self._name_ = "ADACO"
 
     @property
     def _decay_rate(self):

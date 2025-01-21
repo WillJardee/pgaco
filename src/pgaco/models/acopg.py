@@ -34,11 +34,11 @@ class ACOPG(ACOSGD):
                  **kwargs,
                  ) -> None:
         """Class specific params."""
-        self._name_ = "Policy Ratio"
         super().__init__(distance_matrix, func, **kwargs)
         self._prob_table_last_gen = self._prob_matrix
         self._epsilon = epsilon
         self._clip = False if self._epsilon == -1 else True
+        self._name_ = "Policy Ratio"
 
     @property
     def _epsilon(self):

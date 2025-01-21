@@ -1,0 +1,122 @@
+Running on: att48.tsp
+Thu Nov 14 09:13:45 2024    output.prof
+
+         196119 function calls (196109 primitive calls) in 0.164 seconds
+
+   Ordered by: cumulative time
+   List reduced from 123 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.164    0.164 {built-in method builtins.exec}
+        1    0.000    0.000    0.164    0.164 <string>:1(<module>)
+        1    0.000    0.000    0.164    0.164 /home/willj/dev/pgaco/src/pgaco/utils/profiling.py:14(run_model1)
+        1    0.000    0.000    0.162    0.162 /home/willj/dev/pgaco/src/pgaco/models/aco.py:355(run)
+        1    0.000    0.000    0.162    0.162 /home/willj/dev/pgaco/src/pgaco/models/acosgd.py:183(take_step)
+        1    0.000    0.000    0.162    0.162 /home/willj/dev/pgaco/src/pgaco/models/aco.py:316(take_step)
+       75    0.021    0.000    0.158    0.002 /home/willj/dev/pgaco/src/pgaco/models/acosgd.py:87(_single_solution)
+     3450    0.043    0.000    0.053    0.000 {method 'choice' of 'numpy.random._generator.Generator' objects}
+    17250    0.027    0.000    0.041    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:190(__getitem__)
+     3450    0.002    0.000    0.016    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:612(max)
+     6902    0.011    0.000    0.012    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+     3451    0.002    0.000    0.011    0.000 {method 'max' of 'numpy.ndarray' objects}
+     3450    0.010    0.000    0.010    0.000 /home/willj/dev/pgaco/src/pgaco/models/aco.py:226(_get_candiates)
+     3451    0.001    0.000    0.009    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/_methods.py:39(_amax)
+     3450    0.004    0.000    0.008    0.000 /home/willj/dev/pgaco/src/pgaco/models/acosgd.py:167(_advantage)
+    17362    0.006    0.000    0.007    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:168(__array_finalize__)
+     3450    0.003    0.000    0.007    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/numerictypes.py:357(issubdtype)
+    41583    0.005    0.000    0.006    0.000 {built-in method builtins.isinstance}
+     3450    0.001    0.000    0.006    0.000 {method 'sum' of 'numpy.ndarray' objects}
+     3450    0.002    0.000    0.005    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/numeric.py:1855(isscalar)
+
+
+Thu Nov 14 09:13:45 2024    output.prof
+
+         1141720 function calls in 0.548 seconds
+
+   Ordered by: cumulative time
+   List reduced from 118 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.548    0.548 {built-in method builtins.exec}
+        1    0.000    0.000    0.548    0.548 <string>:1(<module>)
+        1    0.000    0.000    0.548    0.548 /home/willj/dev/pgaco/src/pgaco/utils/profiling.py:21(run_model2)
+        1    0.000    0.000    0.547    0.547 /home/willj/dev/pgaco/src/pgaco/models/aco.py:355(run)
+        1    0.000    0.000    0.547    0.547 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:182(take_step)
+        1    0.000    0.000    0.547    0.547 /home/willj/dev/pgaco/src/pgaco/models/aco.py:316(take_step)
+       15    0.001    0.000    0.458    0.031 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:129(_gradient_update)
+      300    0.183    0.001    0.456    0.002 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:114(_gradient)
+   369150    0.156    0.000    0.209    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:190(__getitem__)
+       75    0.011    0.000    0.088    0.001 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:87(_single_solution)
+    17250    0.040    0.000    0.040    0.000 /home/willj/dev/pgaco/src/pgaco/models/aco.py:226(_get_candiates)
+     3450    0.031    0.000    0.039    0.000 {method 'choice' of 'numpy.random._generator.Generator' objects}
+   438333    0.031    0.000    0.035    0.000 {built-in method builtins.isinstance}
+    13800    0.010    0.000    0.025    0.000 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:166(_advantage)
+    17250    0.005    0.000    0.022    0.000 {method 'sum' of 'numpy.ndarray' objects}
+    17250    0.003    0.000    0.018    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/_methods.py:47(_sum)
+    17250    0.007    0.000    0.017    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/numeric.py:1855(isscalar)
+    17252    0.014    0.000    0.014    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+    34612    0.009    0.000    0.011    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:168(__array_finalize__)
+    17362    0.010    0.000    0.010    0.000 {built-in method numpy.array}
+
+
+Running on: ali535.tsp
+Thu Nov 14 09:13:49 2024    output.prof
+
+         2119705 function calls in 2.933 seconds
+
+   Ordered by: cumulative time
+   List reduced from 121 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    2.933    2.933 {built-in method builtins.exec}
+        1    0.001    0.001    2.933    2.933 <string>:1(<module>)
+        1    0.000    0.000    2.932    2.932 /home/willj/dev/pgaco/src/pgaco/utils/profiling.py:14(run_model1)
+        1    0.000    0.000    2.917    2.917 /home/willj/dev/pgaco/src/pgaco/models/aco.py:355(run)
+        1    0.000    0.000    2.917    2.917 /home/willj/dev/pgaco/src/pgaco/models/acosgd.py:183(take_step)
+        1    0.001    0.001    2.917    2.917 /home/willj/dev/pgaco/src/pgaco/models/aco.py:316(take_step)
+       75    0.403    0.005    2.759    0.037 /home/willj/dev/pgaco/src/pgaco/models/acosgd.py:87(_single_solution)
+    37800    0.678    0.000    0.771    0.000 {method 'choice' of 'numpy.random._generator.Generator' objects}
+   189000    0.503    0.000    0.631    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:190(__getitem__)
+    37800    0.615    0.000    0.615    0.000 /home/willj/dev/pgaco/src/pgaco/models/aco.py:226(_get_candiates)
+    37800    0.021    0.000    0.166    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:612(max)
+    75602    0.115    0.000    0.129    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+    37801    0.020    0.000    0.119    0.000 {method 'max' of 'numpy.ndarray' objects}
+    37801    0.008    0.000    0.099    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/_methods.py:39(_amax)
+       15    0.045    0.003    0.086    0.006 /home/willj/dev/pgaco/src/pgaco/models/acosgd.py:130(_gradient_update)
+    37800    0.035    0.000    0.084    0.000 /home/willj/dev/pgaco/src/pgaco/models/acosgd.py:167(_advantage)
+       16    0.076    0.005    0.076    0.005 /home/willj/dev/pgaco/src/pgaco/models/aco.py:243(_prob_rule_update)
+    37800    0.029    0.000    0.065    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/numerictypes.py:357(issubdtype)
+   189112    0.051    0.000    0.063    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:168(__array_finalize__)
+    37800    0.014    0.000    0.059    0.000 {method 'sum' of 'numpy.ndarray' objects}
+
+
+Thu Nov 14 09:14:25 2024    output.prof
+
+         81726820 function calls in 36.011 seconds
+
+   Ordered by: cumulative time
+   List reduced from 118 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000   36.011   36.011 {built-in method builtins.exec}
+        1    0.000    0.000   36.011   36.011 <string>:1(<module>)
+        1    0.000    0.000   36.011   36.011 /home/willj/dev/pgaco/src/pgaco/utils/profiling.py:21(run_model2)
+        1    0.000    0.000   35.998   35.998 /home/willj/dev/pgaco/src/pgaco/models/aco.py:355(run)
+        1    0.000    0.000   35.998   35.998 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:182(take_step)
+        1    0.001    0.001   35.998   35.998 /home/willj/dev/pgaco/src/pgaco/models/aco.py:316(take_step)
+       15    0.053    0.004   33.755    2.250 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:129(_gradient_update)
+      300   16.221    0.054   33.673    0.112 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:114(_gradient)
+ 38669400   12.220    0.000   14.884    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:190(__getitem__)
+   189000    2.970    0.000    2.970    0.000 /home/willj/dev/pgaco/src/pgaco/models/aco.py:226(_get_candiates)
+ 39425583    2.410    0.000    2.464    0.000 {built-in method builtins.isinstance}
+       75    0.306    0.004    2.174    0.029 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:87(_single_solution)
+    37800    0.618    0.000    0.703    0.000 {method 'choice' of 'numpy.random._generator.Generator' objects}
+   151200    0.121    0.000    0.289    0.000 /home/willj/dev/pgaco/src/pgaco/models/__legacy/acosgd_recalc.py:166(_advantage)
+   189000    0.055    0.000    0.271    0.000 {method 'sum' of 'numpy.ndarray' objects}
+   189000    0.036    0.000    0.216    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/_methods.py:47(_sum)
+   189000    0.080    0.000    0.198    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/core/numeric.py:1855(isscalar)
+   189002    0.180    0.000    0.180    0.000 {method 'reduce' of 'numpy.ufunc' objects}
+   189112    0.127    0.000    0.127    0.000 {built-in method numpy.array}
+   378112    0.100    0.000    0.125    0.000 /home/willj/.local/miniconda3/envs/aco/lib/python3.12/site-packages/numpy/matrixlib/defmatrix.py:168(__array_finalize__)
+
+

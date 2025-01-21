@@ -33,19 +33,19 @@ class ACOSGD(ACO):
                  distance_matrix: np.ndarray,
                  func: Callable[[np.ndarray, Iterable], float] = path_len,
                  *,
-                 advantage_func: str = "quality",
+                 advantage_func: str = "local",
                  regularizer: str | None = "l2",
                  annealing_factor: float = 0.01,
                  exact_grad: bool = False,
                  **kwargs) -> None:
         """Class specific params."""
-        self._name_ = "ACO-SGD"
         super().__init__(distance_matrix, func, **kwargs)
         self._adv_func = advantage_func
         self._regularizer = regularizer
         self._annealing_factor = annealing_factor
         self._exact_grad = exact_grad
         self._replay_buffer_grads = np.array([{"sub_term" : 0} for _ in range(self._replay_size)])
+        self._name_ = "ACO-SGD"
 
     """The following is collection of parameter validation rules."""
     @property
