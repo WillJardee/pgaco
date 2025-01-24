@@ -30,7 +30,8 @@ class ACOPG(ACOSGD):
                  distance_matrix,
                  func: Callable[[np.ndarray, Iterable], float] = path_len,
                  *,
-                 epsilon: float = 0.1,
+                 evap_rate: float = 3,
+                 epsilon: float = 0.2,
                  **kwargs,
                  ) -> None:
         """Class specific params."""

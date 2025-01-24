@@ -26,7 +26,7 @@ class ANTQ(ACO):
                  distance_matrix: np.ndarray,
                  func: Callable[[np.ndarray, Iterable], float] = path_len,
                  *,
-                 discount_factor: float = 0.1,
+                 discount_factor: float = 0.4,
                  off_policy: bool = True,
                  **kwargs) -> None:
         """Class specific params."""

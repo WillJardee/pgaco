@@ -29,7 +29,7 @@ class ACO(ACOBase):
                  size_pop: int = 10,
                  alpha: float = 1,
                  beta: float = 2,
-                 evap_rate: float = 0.1,
+                 evap_rate: float = 0.2,
                  minmax: bool = True,
                  replay_size: int = 20,
                  update_size: int | None = None,
@@ -82,15 +82,15 @@ class ACO(ACOBase):
         self._replay_rule = replay_rule
         if self._replay_rule == "none":
             self._replay_size = size_pop
+        elif self._replay_rule == "global_best":
+            self._replay_rule = "elite"
+            self._replay_size = 1
         else:
             self._replay_size = replay_size
         if update_size is not None:
             self._update_size = update_size
         else:
             self._update_size = self._replay_size
-        if self._replay_rule == "global_best":
-            self._replay_rule = "elite"
-            self._replay_size = 1
         self._minmax_adaptive = minmax
         self.slim = slim
         self._softmax = softmax
@@ -173,7 +173,7 @@ class ACO(ACOBase):
 
     @_evap_rate.setter
     def _evap_rate(self, evap_rate):
-        assert self._between(evap_rate, lower=0, upper=1, inclusive=True)
+        assert self._between(evap_rate, lower=0, inclusive=True)
         self.__evap_rate = float(evap_rate)
 
     @property
