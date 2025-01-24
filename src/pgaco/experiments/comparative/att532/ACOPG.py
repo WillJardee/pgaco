@@ -14,9 +14,9 @@ def cal_total_distance(routine):
 
 def run_model(distance_matrix, seed):
     aco = MODEL(distance_matrix,
-              minmax=False,
-              slim = False,
-              seed = seed)
+                slim = False,
+                epsilon = -1,
+                seed = seed)
     aco.run(max_iter)
     return aco.generation_best_Y, None, aco._name_
 
@@ -25,26 +25,25 @@ if __name__ == "__main__":
     # Reading in params
     global max_iter
     global seed
-    seed = 42
-    max_iter = 500
-    runs = 5
+    seed = 47
+    max_iter = 5000
+    runs = 10
 
     MODEL = ACOPG
-    name = "ACO"
-    replay_size = "small"
+    name = "ACOPG"
 
-    graph = "pcb442.tsp"
-    graph_name = "pcb442"
+    graph = "att532.tsp"
+    graph_name = "att532"
     distance_matrix = get_graph(graph)
 
     module_path     = dirname(pgaco.__spec__.origin)
-    save_dir        = f"{module_path}/experiments/ablation/results/"
-    run_name = save_dir + "_".join([graph_name, name, replay_size, str(max_iter)]) + ".npy"
+    save_dir        = f"{module_path}/experiments/comparative/results/"
+    run_name = save_dir + "_".join([graph_name, name, str(max_iter)]) + ".npy"
     # graph = 20
     # graph = "ali535.tsp"
     # graph = "pcb442.tsp"
 
-    print(f"Running {name} {replay_size}")
+    print(f"Running {graph_name} {name}")
     aco_runs, _, aco_name = parallel_runs(run_model, runs, distance_matrix, seed)
     np.save(run_name, aco_runs)
 
