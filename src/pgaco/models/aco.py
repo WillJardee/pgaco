@@ -32,6 +32,7 @@ class ACO(ACOBase):
                  evap_rate: float = 0.1,
                  minmax: bool = True,
                  replay_size: int = 20,
+                 update_size: int | None = None,
                  replay_rule: str = "elite",
                  slim: bool = True,
                  softmax: bool = False,
@@ -57,7 +58,9 @@ class ACO(ACOBase):
             minmax : bool, default True
                 Whether to use the adaptive minmax rule
             replay_size : int, default 1
-                Size of replay buffer.
+                Size of replay buffer to keep.
+            update_size : int | None, default None
+                Number of samples from the replay buffer to use in the update step.
             replay_rule : str, elite
                 Type of replay rule to use. Options: elite, evict, none
                 elite: keep the best `replay_size` ants
@@ -76,8 +79,15 @@ class ACO(ACOBase):
         self._alpha = alpha
         self._beta = beta
         self._evap_rate = evap_rate
-        self._replay_size = replay_size
         self._replay_rule = replay_rule
+        if self._replay_rule == "none":
+            self._replay_size = size_pop
+        else:
+            self._replay_size = replay_size
+        if update_size is not None:
+            self._update_size = update_size
+        else:
+            self._update_size = self._replay_size
         if self._replay_rule == "global_best":
             self._replay_rule = "elite"
             self._replay_size = 1
@@ -112,6 +122,7 @@ class ACO(ACOBase):
         self._heuristic_table = self._prob_bias.copy()
         num_list = np.arange(self._dim)
         self._replay_buffer = np.array([self._rng.permutation(num_list) for _ in range(self._replay_size)])
+        self._replay_buffer_probs = np.array([np.ones(self._dim) for _ in range(self._replay_size)])
         self._replay_buffer_fit = np.array([self.func(self.distance_matrix, i) for i in self._replay_buffer])
         self._replay_buffer_grads = np.array([dok_matrix((self._dim, self._dim)) for _ in range(self._replay_size)])
         self.current_best_Y, self.current_best_X = self._get_best(n=1)
@@ -175,12 +186,24 @@ class ACO(ACOBase):
         self.__replay_size = int(replay_size)
 
     @property
+    def _update_size(self):
+        return self.__update_size
+
+    @_replay_size.setter
+    def _update_size(self, update_size):
+        if not hasattr(self, '_replay_size'): NameError('_replay_size must be set before calling _update_size')
+        assert self._replay_size >= update_size, "replay_size  must be at least as large as update_size"
+        self.__update_size = int(update_size)
+
+
+    @property
     def _replay_rule(self):
         return self.__replay_rule
 
     @_replay_rule.setter
     def _replay_rule(self, replay_rule):
-        assert replay_rule in ["global_best", "elite", "evict", "none"]
+        valid_replay = ["global_best", "elite", "evict", "none"]
+        assert replay_rule in valid_replay, f"replay_rule must be one of {valid_replay}"
         self.__replay_rule = replay_rule
 
     @property
@@ -215,13 +238,23 @@ class ACO(ACOBase):
             # grad[n2, n1] += 1 / cost
         return grad
 
+    def _buffer_gradient(self, index):
+        """Calculate the gradient for a single example."""
+        cost = self._replay_buffer_fit[index]
+        # add 1/(path len) to each edge
+        solution = self._replay_buffer[index]
+        return self._gradient(solution, cost)
+
     def _gradient_update(self) -> None:
         """Take an gradient step."""
-        # tot_grad = np.zeros(self._heuristic_table.shape)
-        # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-        #     tot_grad += self._gradient(solution, cost)
-        tot_grad = np.sum(self._replay_buffer_grads)
-        tot_grad = tot_grad/self._replay_size
+        if self._replay_rule != "none":
+            buffer_sample = np.array(self._rng.integers(0, self._replay_size, self._update_size)).flatten() # sample with replacement
+        else:
+            buffer_sample = np.arange(self._replay_size)
+        tot_grad = np.zeros([self._dim, self._dim])
+        for i in buffer_sample:
+            tot_grad += self._buffer_gradient(i)
+        tot_grad = tot_grad/self._update_size
 
         self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + self._evap_rate * tot_grad
         self._minmax()
@@ -262,36 +295,68 @@ class ACO(ACOBase):
         probs /= probs.sum()
         return probs[node]
 
-    def _elite_replay_rule(self, new_fitness, new_solutions, new_grads) -> None:
+    def _elite_replay_rule(self, new_fitness, new_solutions, new_grads,  new_dist) -> None:
         """Keep the most recent `self._replay_size` elements in the `self._replay_buffer` and `self._replay_buffer_fit`."""
-        full_buffer = np.concatenate([new_solutions, self._replay_buffer])
         full_fitness = np.concatenate([new_fitness, self._replay_buffer_fit])
-        full_grads = np.concatenate([new_grads, self._replay_buffer_grads])
         keep_indices = np.argpartition(full_fitness, kth=self._replay_size)[:self._replay_size]
-        self._replay_buffer = full_buffer[keep_indices]
         self._replay_buffer_fit = full_fitness[keep_indices]
-        self._replay_buffer_grads = full_grads[keep_indices]
 
-    def _evict_replay_rule(self, new_fitness, new_solutions, new_grads) -> None:
+        if new_solutions is not None:
+            full_buffer = np.concatenate([new_solutions, self._replay_buffer])
+            self._replay_buffer = full_buffer[keep_indices]
+
+        if new_grads is not None:
+            full_grads = np.concatenate([new_grads, self._replay_buffer_grads])
+            self._replay_buffer_grads = full_grads[keep_indices]
+
+        if new_dist is not None:
+            full_probs = np.concatenate([new_dist, self._replay_buffer_probs])
+            self._replay_buffer_probs = full_probs[keep_indices]
+
+    def _evict_replay_rule(self, new_fitness, new_solutions, new_grads, new_dist) -> None:
         """Keep the best `self._replay_size` elements in the `self._replay_buffer` and `self._replay_buffer_fit`."""
-        full_buffer = np.concatenate([new_solutions, self._replay_buffer])
         full_fitness = np.concatenate([new_fitness, self._replay_buffer_fit])
-        full_grads = np.concatenate([new_grads, self._replay_buffer_grads])
-        self._replay_buffer = full_buffer[:self._replay_size]
-        self._replay_buffer_fit = full_fitness[:self._replay_size]
-        self._replay_buffer_grads = full_grads[:self._replay_size]
+        keep_indices = np.arange(0, self._replay_size)
+        self._replay_buffer_fit = full_fitness[keep_indices]
 
-    def _add_replay_buffer(self, new_fitness, new_solutions, new_grads) -> None:
+        if new_solutions is not None:
+            full_buffer = np.concatenate([new_solutions, self._replay_buffer])
+            self._replay_buffer = full_buffer[keep_indices]
+
+        if new_grads is not None:
+            full_grads = np.concatenate([new_grads, self._replay_buffer_grads])
+            self._replay_buffer_grads = full_grads[keep_indices]
+
+        if new_dist is not None:
+            full_probs = np.concatenate([new_dist, self._replay_buffer_probs])
+            self._replay_buffer_probs = full_probs[keep_indices]
+
+    def _none_replay_rule(self, new_fitness, new_solutions, new_grads, new_dist) -> None:
+        """Keep the best `self._replay_size` elements in the `self._replay_buffer` and `self._replay_buffer_fit`."""
+        self._replay_buffer_fit = new_fitness
+        if new_solutions is not None:
+            self._replay_buffer = new_solutions
+
+        if new_grads is not None:
+            self._replay_buffer_grads = new_grads
+
+        if new_dist is not None:
+            self._replay_buffer_probs = new_dist
+
+
+    def _add_replay_buffer(self, new_fitness,  new_solutions, new_grads, new_dist = None) -> None:
         """Add the provided list to the replay buffer, prefering new values when relevant."""
         match self._replay_rule:
             case "none":
                 self._replay_buffer = new_solutions
                 self._replay_buffer_fit = new_fitness
                 self._replay_buffer_grads = new_grads
+                if new_dist is not None:
+                    self._replay_buffer_probs = new_dist
             case "elite":
-                self._elite_replay_rule(new_fitness, new_solutions, new_grads)
+                self._elite_replay_rule(new_fitness, new_solutions, new_grads, new_dist)
             case "evict":
-                self._evict_replay_rule(new_fitness, new_solutions, new_grads)
+                self._evict_replay_rule(new_fitness, new_solutions, new_grads, new_dist)
 
     def get_solution(self, start: int | None = None, seed: int | None =  None) -> tuple[float, np.ndarray]:
         if start is None:
@@ -301,7 +366,7 @@ class ACO(ACOBase):
         path = [start]
         for _ in range(self._dim - 1):
             allow_list = self._get_candiates(path)
-            next_point = allow_list[self._heuristic_table[path[-1], allow_list].argmax()]
+            next_point = allow_list[self._prob_matrix[path[-1], allow_list].argmax()]
             path.append(next_point)
         return self.func(self.distance_matrix, path), np.array(path)
 
@@ -310,7 +375,7 @@ class ACO(ACOBase):
         # assert isinstance(sort, bool)
 
         if n == 1:
-            index = self._replay_buffer_fit.argmin()
+            index = np.array(self._replay_buffer_fit).argmin()
             return np.array(self._replay_buffer_fit[index]), np.array(self._replay_buffer[index])
         elif n > 1 and n <= self._dim:
             if sort:

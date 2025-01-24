@@ -120,7 +120,28 @@ class ACOSGD(ACO):
             allow_list = self._get_candiates(set(solution[:k+1])) # get accessible points
             prob = np.array(self._prob_matrix[solution[k], allow_list]).flatten()
             prob = prob / prob.sum()
-            advantage = self._advantage(current_point=solution[-2], next_point=solution[-1], allow_list=allow_list)
+
+            if self._adv_func == self.Advantage.ADVANTAGE_LOCAL:
+                advantage = self._advantage_local(n1, n2, allow_list)
+            elif self._adv_func == self.Advantage.ADVANTAGE_PATH:
+                advantage = self._advantage_path(solution)
+            elif self._adv_func == self.Advantage.QUALITY:
+                advantage = self._quality(n1, n2)
+            elif self._adv_func == self.Advantage.REWARD:
+                advantage = self._reward(n1, n2)
+            elif self._adv_func == self.Advantage.REWARD_TO_GO:
+                advantage = self._reward_to_go(n1, solution[k:], self._depth)
+            elif self._adv_func == self.Advantage.REWARD_TO_GO_BASELINE:
+                advantage = self._reward_to_go_baselined(n1, solution[k:], allow_list, self._depth)
+            elif self._adv_func == self.Advantage.REWARD_BASELINE:
+                advantage = self._reward_baselined(n1, n2, allow_list)
+            elif self._adv_func == self.Advantage.REWARD_DECAY:
+                advantage = self._reward_decay(n1, solution[k:], None, self._depth)
+            elif self._adv_func == self.Advantage.REWARD_ENTROPY:
+                advantage = self._reward_entropy(None, None)
+            else:
+                raise NotImplementedError(f"Advantage function {self._adv_func} is not valid")
+
             grad[n1, n2] += self._alpha * advantage / self._heuristic_table[n1, n2]
             for point, prob_val in zip(allow_list, prob):
                 grad[n1, point] -= self._alpha * advantage /self._heuristic_table[n1, point] * prob_val

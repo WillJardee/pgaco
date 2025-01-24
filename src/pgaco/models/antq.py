@@ -72,21 +72,21 @@ class ANTQ(ACO):
                     self._running_grad[solution[k], solution[k+1]] += self._heuristic_table[solution[k], solution[k+1]]
         return grad
 
-    def _gradient_update(self) -> None:
-        """Take an gradient step."""
-        # tot_grad = np.zeros(self._heuristic_table.shape)
-        # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-        #     tot_grad += self._gradient(solution, cost)
-        # tot_grad = tot_grad/self._replay_size
-        tot_grad = np.sum(self._replay_buffer_grads)
-        tot_grad = tot_grad/self._replay_size
-
-
-        self._running_grad = self._running_grad/(self._size_pop)
-
-        self._heuristic_table = (1-self._evap_rate) * self._heuristic_table + self._evap_rate * (tot_grad + self._discount_factor * self._running_grad)
-        # Notice that there is the missing max term here, that is moved to the gradient
-        self._minmax()
+    # def _gradient_update(self) -> None:
+    #     """Take an gradient step."""
+    #     # tot_grad = np.zeros(self._heuristic_table.shape)
+    #     # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
+    #     #     tot_grad += self._gradient(solution, cost)
+    #     # tot_grad = tot_grad/self._replay_size
+    #     tot_grad = np.sum(self._replay_buffer_grads)
+    #     tot_grad = tot_grad/self._replay_size
+    #
+    #
+    #     self._running_grad = self._running_grad/(self._size_pop)
+    #
+    #     self._heuristic_table = (1-self._evap_rate) * self._heuristic_table + self._evap_rate * (tot_grad + self._discount_factor * self._running_grad)
+    #     # Notice that there is the missing max term here, that is moved to the gradient
+    #     self._minmax()
 
 
 def run_model1(distance_matrix, seed):

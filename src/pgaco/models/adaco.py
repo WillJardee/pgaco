@@ -41,29 +41,21 @@ class ADACO(ACOSGD):
 
     def _gradient_update(self) -> None:
         """Take an gradient step."""
-        tot_grad = np.zeros(self._heuristic_table.shape)
-        # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-        #     tot_grad += self._gradient(solution, cost)
-        # tot_grad = tot_grad/self._replay_size
-        for grad in self._replay_buffer_grads:
-            for coord, val in zip(grad.keys(), grad.values()):
-                if coord == "sub_term":
-                    continue
-                tot_grad[coord[0], coord[1]] = val
-            tot_grad -= grad["sub_term"]
-        tot_grad = tot_grad/self._replay_size
-
-        # for solution, cost in zip(self._replay_buffer, self._replay_buffer_fit):
-        #     tot_grad += self._gradient(solution, cost)
-        # tot_grad = tot_grad/self._replay_size
+        if self._replay_rule != "none":
+            buffer_sample = np.array(self._rng.integers(0, self._replay_size, self._update_size)).flatten() # sample with replacement
+        else:
+            buffer_sample = np.arange(self._replay_size)
+        tot_grad = np.zeros([self._dim, self._dim])
+        for i in buffer_sample:
+            tot_grad += self._buffer_gradient(i)
+        tot_grad = tot_grad/self._update_size
 
         self._decay_grad = self._decay_rate * self._decay_grad + (1-self._decay_rate) * tot_grad**2
         epsilon = 1e-7
         hess = tot_grad * np.sqrt((self._delta_decay_grad + epsilon) / (self._decay_grad + epsilon) )
-        self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table - hess
+        self._heuristic_table = (1 - self._evap_rate) * self._heuristic_table + hess
         self._minmax()
         self._delta_decay_grad = self._decay_rate * self._delta_decay_grad + (1-self._decay_rate) * (hess * hess)
-
 
 def run_model1(distance_matrix, seed):
     aco = ADACO(distance_matrix,
@@ -87,7 +79,7 @@ if __name__ == "__main__":
     from pgaco.utils import get_graph, plot, parallel_runs
     size = 20
     runs = 5
-    max_iter = 1500
+    max_iter = 100
     distance_matrix = get_graph(size)
 
     print("running ADACO w/ regularizer")

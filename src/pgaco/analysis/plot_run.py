@@ -18,6 +18,7 @@ def run_aco(distance_matrix, seed):
     aco = ACO(distance_matrix,
               minmax=False,
               slim = False,
+                 replay_rule = "none",
               seed = seed)
     aco.run(max_iter)
     return aco.generation_best_Y, None, aco._name_
@@ -25,6 +26,7 @@ def run_aco(distance_matrix, seed):
 def run_minmaxaco(distance_matrix, seed):
     aco = ACO(distance_matrix,
               slim = False,
+            replay_rule = "none",
               seed = seed)
     aco.run(max_iter)
     return aco.generation_best_Y, None,  "MINMAX " + aco._name_
@@ -32,6 +34,7 @@ def run_minmaxaco(distance_matrix, seed):
 def run_adaco(distance_matrix, seed):
     aco = ADACO(distance_matrix,
                 slim = False,
+                 replay_rule = "none",
                 seed = seed)
     aco.run(max_iter)
     return aco.generation_best_Y, None, aco._name_
@@ -39,6 +42,7 @@ def run_adaco(distance_matrix, seed):
 def run_antq(distance_matrix, seed):
     aco = ANTQ(distance_matrix,
                slim = False,
+                 replay_rule = "none",
                seed = seed)
     aco.run(max_iter)
     return aco.generation_best_Y, None, aco._name_
@@ -47,6 +51,7 @@ def run_antq(distance_matrix, seed):
 def run_acosgd(distance_matrix, seed):
     aco = ACOSGD(distance_matrix,
                  slim = False,
+                 replay_rule = "none",
                  seed = seed)
     aco.run(max_iter)
     return aco.generation_best_Y, None, aco._name_
@@ -54,6 +59,7 @@ def run_acosgd(distance_matrix, seed):
 def run_acopg(distance_matrix, seed):
     aco = ACOPG(distance_matrix,
                 slim = False,
+                 replay_rule = "none",
                 epsilon = -1,
                 seed = seed)
     aco.run(max_iter)
@@ -62,6 +68,7 @@ def run_acopg(distance_matrix, seed):
 def run_acoppo(distance_matrix, seed):
     aco = ACOPG(distance_matrix,
                 slim = False,
+                 replay_rule = "none",
                 seed = seed)
     aco.run(max_iter)
     return aco.generation_best_Y, None, aco._name_ + " w/ clip"
@@ -72,12 +79,13 @@ if __name__ == "__main__":
     global max_iter
     global seed
     seed = 42
-    max_iter = 1000
+    max_iter = 50
     runs = 5
 
     module_path     = dirname(pgaco.__spec__.origin)
     save_dir        = f"{module_path}/results/pgtests"
-    graph = "ali535.tsp"
+    graph = 20
+    # graph = "ali535.tsp"
     distance_matrix = get_graph(graph)
 
     G = nx.from_numpy_array(distance_matrix)
