@@ -1,6 +1,6 @@
 #! /bin/bash
-#SBATCH --account=priority-johnsheppard      	# specify the account to use if using a priority partition
-#SBATCH --partition=priority               	# queue partition to run the job in
+##SBATCH --account=priority-johnsheppard      	# specify the account to use if using a priority partition
+#SBATCH --partition=nextgen               	# queue partition to run the job in
 #SBATCH --cpus-per-task=10              		# number of cores to allocate
 #SBATCH --nodes=1                       	# number of nodes to allocate
 #SBATCH --mem=32G                        	# amount of Memory allocated
