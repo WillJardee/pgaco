@@ -14,7 +14,7 @@
 source ~/.bashrc
 module load Anaconda3
 source activate $HOME/sci
-cd $HOME/dev/pgaco/src/pgaco/experiments/comparative/pcb442/
+cd $HOME/dev/pgaco/src/pgaco/experiments/comparative/pcb442
 
 echo "running aco"
 python ACO.py

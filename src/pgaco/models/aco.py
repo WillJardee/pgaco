@@ -29,7 +29,7 @@ class ACO(ACOBase):
                  size_pop: int = 10,
                  alpha: float = 1,
                  beta: float = 2,
-                 evap_rate: float = 0.2,
+                 evap_rate: float = 0.1,
                  minmax: bool = True,
                  replay_size: int = 20,
                  update_size: int | None = None,
