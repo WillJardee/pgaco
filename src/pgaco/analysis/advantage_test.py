@@ -54,22 +54,23 @@ if __name__ == "__main__":
     runs = 5
 
     module_path     = dirname(pgaco.__spec__.origin)
-    save_dir        = f"{module_path}/results/pgtests"
+    save_dir        = f"{module_path}/results/advtest/"
     # graph = 10
     # graph = "ali535.tsp"
     graph = "tsp225.tsp"
     graph_name = "tsp225"
     distance_matrix = get_graph(graph)
 
-    G = nx.from_numpy_array(distance_matrix)
-    cycle = nx.approximation.simulated_annealing_tsp(G, "greedy")
-    cost = sum(G[n][nbr]["weight"] for n, nbr in nx.utils.pairwise(cycle))
-    plot(cost*np.ones(MAX_ITER).reshape((1, -1)), color="black", label="simulated annealing")
+    # G = nx.from_numpy_array(distance_matrix)
+    # cycle = nx.approximation.simulated_annealing_tsp(G, "greedy")
+    # cost = sum(G[n][nbr]["weight"] for n, nbr in nx.utils.pairwise(cycle))
+    # plot(cost*np.ones(MAX_ITER).reshape((1, -1)), color="black", label="simulated annealing")
 
     for func in ADV_FUNCS:
         current_adv_func = func
-        print(f"running {func}")
+        print(f"running {func} on {graph_name}")
         aco_runs, _, aco_name = parallel_runs(run_aco, runs, distance_matrix, SEED)
+        np.save(f"{save_dir}/{graph_name}_{func}.npy", aco_runs)
         plot(aco_runs, color=ADV_FUNCS_COLORS[func], label=func)
 
     plt.legend()
