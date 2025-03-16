@@ -72,7 +72,7 @@ if __name__ == "__main__":
     global max_iter
     global seed
     seed = 42
-    max_iter = 500
+    max_iter = 100
     runs = 5
 
 
@@ -82,10 +82,16 @@ if __name__ == "__main__":
     # graph = 20
     # graph = "ali535.tsp"
     # graph = "pcb442.tsp"
-    graph = "pr76.tsp"
-    distance_matrix = get_graph(graph)
+    # graph = "att48.tsp"
+    # distance_matrix = get_graph(graph)
 
-    G = nx.from_numpy_array(distance_matrix)
+    import tsplib95
+    # problem = tsplib95.load('../tsplib/berlin52.tsp')
+    problem = tsplib95.load('../tsplib/att48.tsp')
+    G = problem.get_graph()
+    distance_matrix = nx.to_numpy_array(G)
+
+    # G = nx.from_numpy_array(distance_matrix)
     cycle = nx.approximation.simulated_annealing_tsp(G, "greedy")
     cost = sum(G[n][nbr]["weight"] for n, nbr in nx.utils.pairwise(cycle))
     plot(cost*np.ones(max_iter).reshape((1, -1)), color="black", label="simulated annealing")
